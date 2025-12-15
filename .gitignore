@@ -1,0 +1,53 @@
+# Gradle
+.gradle
+**/build/
+!**/src/**/build/
+# Ignore Gradle GUI config
+gradle-app.setting
+# Cache of project
+.gradletasknamecache
+# Gradle wrapper jar file and properties should generally be committed to standardize the build version across environments.
+# If you decide to ignore them, uncomment the lines below:
+# !gradle-wrapper.jar
+# !gradle-wrapper.properties
+
+# Eclipse
+# Eclipse project files should be committed to maintain consistent project settings.
+# If you decide to ignore them, uncomment the lines below:
+#.project
+#.classpath
+#.settings/
+
+# VS Code
+# VS Code user-specific workspace settings and internal files
+.vscode/
+# Some specific VS Code files to ignore
+.history/
+*.log
+*.pylintrc
+*.eslintrc.js
+
+# Java
+# Compiled class files
+*.class
+
+# Package Files
+# Comment out desired files to track
+# *.jar
+# *.war
+# *.ear
+
+# Mobile Tools for Java (J2ME)
+.mtj.tmp/
+
+# Virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+hs_err_pid*
+
+# Maven output directory (if you also use Maven alongside Gradle)
+/target/
+
+# System files (optional, as these are OS-specific)
+.DS_Store # macOS
+Thumbs.db # Windows
+
+/bin/
