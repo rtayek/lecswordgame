@@ -38,6 +38,40 @@ public class GameController {
         return gameState;
     }
 
+    public GameState startNewSoloGame(GamePlayer player,
+                                      Difficulty difficulty,
+                                      WordLength wordLength,
+                                      TimerDuration timerDuration,
+                                      String targetWord) {
+        if (player == null) {
+            throw new IllegalArgumentException("Player must not be null");
+        }
+        if (difficulty == null || wordLength == null || timerDuration == null) {
+            throw new IllegalArgumentException("Game settings must not be null");
+        }
+        if (targetWord == null || targetWord.trim().isEmpty()) {
+            throw new IllegalArgumentException("Target word must not be empty");
+        }
+
+        String trimmedTarget = targetWord.trim();
+        if (trimmedTarget.length() != wordLength.length()) {
+            throw new IllegalArgumentException("Target word must be " + wordLength.length() + " characters long");
+        }
+
+        gameState = new GameState(
+                GameMode.solo,
+                difficulty,
+                wordLength,
+                timerDuration,
+                player,
+                null
+        );
+        gameState.setStatus(GameStatus.inProgress);
+        gameState.setPlayerTwoWord(new WordChoice(trimmedTarget, model.Enums.WordSource.rollTheDice));
+        gameState.setPlayerOneWord(null);
+        return gameState;
+    }
+
     public GuessResult submitGuess(GamePlayer player, String guess) {
         if (gameState == null) {
             throw new IllegalStateException("No active game");
@@ -90,52 +124,36 @@ public class GameController {
     }
 
     private GuessResult evaluateNormal(String guess, String target) {
-        int length = guess.length();
-        List<LetterFeedback> feedback = new ArrayList<>(length);
-        for (int i = 0; i < length; i++) {
-            feedback.add(LetterFeedback.unused);
-        }
-
-        char[] guessChars = guess.toLowerCase().toCharArray();
-        char[] targetChars = target.toLowerCase().toCharArray();
-        boolean[] usedInTarget = new boolean[length];
-
-        int correctLetterCount = 0;
-
-        for (int i = 0; i < length; i++) {
-            if (guessChars[i] == targetChars[i]) {
-                feedback.set(i, LetterFeedback.correctPosition);
-                usedInTarget[i] = true;
-                correctLetterCount++;
-            }
-        }
-
-        for (int i = 0; i < length; i++) {
-            if (feedback.get(i) != LetterFeedback.unused) {
-                continue;
-            }
-            char c = guessChars[i];
-            int foundIndex = -1;
-            for (int j = 0; j < length; j++) {
-                if (!usedInTarget[j] && targetChars[j] == c) {
-                    foundIndex = j;
-                    break;
-                }
-            }
-            if (foundIndex >= 0) {
-                feedback.set(i, LetterFeedback.wrongPosition);
-                usedInTarget[foundIndex] = true;
-                correctLetterCount++;
-            } else {
-                feedback.set(i, LetterFeedback.notInWord);
-            }
-        }
-
-        boolean exactMatch = guess.equalsIgnoreCase(target);
-        return new GuessResult(guess, feedback, correctLetterCount, exactMatch);
+        return evaluateWithFeedback(
+                guess,
+                target,
+                LetterFeedback.correctPosition,
+                LetterFeedback.wrongPosition,
+                LetterFeedback.notInWord
+        );
     }
 
     private GuessResult evaluateHard(String guess, String target) {
+        // In hard mode, any used letter (correct spot or elsewhere) is marked the same.
+        return evaluateWithFeedback(
+                guess,
+                target,
+                LetterFeedback.usedPresent,
+                LetterFeedback.usedPresent,
+                LetterFeedback.notInWord
+        );
+    }
+
+    private GuessResult evaluateExpert(String guess, String target) {
+        // Expert returns the same feedback as normal; tweak here if expert should hide feedback.
+        return evaluateNormal(guess, target);
+    }
+
+    private GuessResult evaluateWithFeedback(String guess,
+                                             String target,
+                                             LetterFeedback hitFeedback,
+                                             LetterFeedback presentFeedback,
+                                             LetterFeedback absentFeedback) {
         int length = guess.length();
         List<LetterFeedback> feedback = new ArrayList<>(length);
         for (int i = 0; i < length; i++) {
@@ -150,7 +168,7 @@ public class GameController {
 
         for (int i = 0; i < length; i++) {
             if (guessChars[i] == targetChars[i]) {
-                feedback.set(i, LetterFeedback.usedPresent);
+                feedback.set(i, hitFeedback);
                 usedInTarget[i] = true;
                 correctLetterCount++;
             }
@@ -169,26 +187,16 @@ public class GameController {
                 }
             }
             if (foundIndex >= 0) {
-                feedback.set(i, LetterFeedback.usedPresent);
+                feedback.set(i, presentFeedback);
                 usedInTarget[foundIndex] = true;
                 correctLetterCount++;
             } else {
-                feedback.set(i, LetterFeedback.notInWord);
+                feedback.set(i, absentFeedback);
             }
         }
 
         boolean exactMatch = guess.equalsIgnoreCase(target);
         return new GuessResult(guess, feedback, correctLetterCount, exactMatch);
-    }
-
-    private GuessResult evaluateExpert(String guess, String target) {
-        GuessResult normal = evaluateNormal(guess, target);
-        return new GuessResult(
-                guess,
-                List.of(),
-                normal.getCorrectLetterCount(),
-                normal.isExactMatch()
-        );
     }
 
     GameState gameState;
