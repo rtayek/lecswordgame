@@ -1,6 +1,5 @@
 package model;
 
-import java.util.ArrayList;
 import java.util.List;
 import model.Enums.Difficulty;
 import model.Enums.LetterFeedback;

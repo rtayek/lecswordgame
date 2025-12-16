@@ -30,6 +30,12 @@ class GameSetupPanel extends JPanel {
             var difficulty = Difficulty.normal;
             var wordLength = WordLength.five;
             var timerDuration = TimerDuration.none;
+            var wordOne = gameController.pickWord(wordLength);
+            var wordTwo = gameController.pickWord(wordLength);
+            // Avoid identical words when possible.
+            if (wordTwo.equals(wordOne)) {
+                wordTwo = gameController.pickWord(wordLength);
+            }
 
             gameController.startNewMultiplayerGame(
                     playerOne,
@@ -40,8 +46,8 @@ class GameSetupPanel extends JPanel {
             );
 
             var state = gameController.getGameState();
-            state.setPlayerOneWord(new WordChoice("apple", WordSource.manual));
-            state.setPlayerTwoWord(new WordChoice("grape", WordSource.manual));
+            state.setPlayerOneWord(new WordChoice(wordOne, WordSource.rollTheDice));
+            state.setPlayerTwoWord(new WordChoice(wordTwo, WordSource.rollTheDice));
 
             navigation.showMultiplayerGame();
         });

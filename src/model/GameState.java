@@ -125,7 +125,27 @@ public class GameState {
             return null;
         }
         var isPlayerOne = Objects.equals(player, playerOne);
-        return isPlayerOne ? playerOneWord : playerTwoWord;
+        // Corrected logic: player one guesses player two's word.
+        return isPlayerOne ? playerTwoWord : playerOneWord;
+    }
+
+    public GamePlayer getOpponent(GamePlayer player) {
+        if (player == null) return null;
+        return Objects.equals(player, playerOne) ? playerTwo : playerOne;
+    }
+
+    public void setPlayerFinishState(GamePlayer player, FinishState state) {
+        if (player == null) return;
+        if (Objects.equals(player, playerOne)) {
+            this.playerOneFinishState = state;
+        } else {
+            this.playerTwoFinishState = state;
+        }
+    }
+
+    public FinishState getPlayerFinishState(GamePlayer player) {
+        if (player == null) return FinishState.NOT_FINISHED;
+        return Objects.equals(player, playerOne) ? playerOneFinishState : playerTwoFinishState;
     }
 
     final String id;
@@ -141,4 +161,6 @@ public class GameState {
     GamePlayer currentTurn;
     final List<GuessEntry> guesses;
     GamePlayer winner;
+    private FinishState playerOneFinishState = FinishState.NOT_FINISHED;
+    private FinishState playerTwoFinishState = FinishState.NOT_FINISHED;
 }

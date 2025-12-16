@@ -35,6 +35,9 @@ public class Enums {
 			}
 			final int length;
 		}
+	public enum FinishState {
+		NOT_FINISHED, FINISHED_SUCCESS, FINISHED_FAIL
+	}
 	public enum WordSource {
 		manual,rollTheDice
 	}

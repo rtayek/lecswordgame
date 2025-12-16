@@ -59,42 +59,22 @@ class SoloGamePanel extends JPanel {
     }
 
     private void handleGuess() {
-        var state = gameController.getGameState();
-        if (state == null) {
-            setStatus("Start a new game first.");
-            return;
-        }
-
-        if (state.getStatus() == model.Enums.GameStatus.finished) {
-            setStatus("Game finished. Start a new word.");
-            return;
-        }
-
-        var expectedLength = state.getWordLength().length();
-        var raw = guessField.getText();
-        var upper = raw == null ? "" : raw.trim().toUpperCase();
-        var guess = upper.replaceAll("[^A-Z]", "");
-        if (guess.isEmpty()) {
-            setStatus("Enter a guess first.");
-            return;
-        }
-        if (guess.length() != expectedLength) {
-            setStatus("Guess must be " + expectedLength + " letters.");
-            return;
-        }
+        var rawGuess = guessField.getText();
 
         try {
-            GuessResult result = gameController.submitGuess(player, guess);
+            GuessResult result = gameController.submitGuess(player, rawGuess);
             grid.addGuessRow(new GuessRowPanel(result.guess(), result.feedback()));
             guessField.setText("");
 
             if (result.exactMatch()) {
                 setStatus("You solved it!");
             } else {
+                // This status message could be improved, but we'll leave it for now.
                 setStatus(result.correctLetterCount() + " letters are correct.");
             }
-        } catch (RuntimeException ex) {
-            setStatus("Error: " + ex.getMessage());
+        } catch (IllegalStateException | IllegalArgumentException ex) {
+            // Exceptions from the controller are now used to display status messages.
+            setStatus(ex.getMessage());
         }
     }
 
@@ -109,12 +89,14 @@ class SoloGamePanel extends JPanel {
         grid.clearRows();
         guessField.setText("");
         setStatus(" ");
+        var length = WordLength.five;
+        var target = gameController.pickWord(length);
         gameController.startNewSoloGame(
                 player,
                 Difficulty.normal,
-                WordLength.five,
+                length,
                 TimerDuration.none,
-                "APPLE"
+                target
         );
     }
 

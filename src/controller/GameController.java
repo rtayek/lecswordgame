@@ -2,6 +2,8 @@ package controller;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
 import model.Enums.*;
 import model.GameState;
@@ -41,12 +43,11 @@ public class GameController {
         if (difficulty == null || wordLength == null || timerDuration == null) {
             throw new IllegalArgumentException("Game settings must not be null");
         }
-        if (targetWord == null || targetWord.trim().isEmpty()) {
-            throw new IllegalArgumentException("Target word must not be empty");
-        }
+        String candidate = (targetWord == null || targetWord.trim().isEmpty())
+                ? pickWord(wordLength)
+                : targetWord.trim();
 
-        String trimmedTarget = targetWord.trim();
-        if (trimmedTarget.length() != wordLength.length()) {
+        if (candidate.length() != wordLength.length()) {
             throw new IllegalArgumentException("Target word must be " + wordLength.length() + " characters long");
         }
 
@@ -59,62 +60,104 @@ public class GameController {
                 null
         );
         gameState.setStatus(GameStatus.inProgress);
-        gameState.setPlayerOneWord(new WordChoice(trimmedTarget, model.Enums.WordSource.rollTheDice));
-        gameState.setPlayerTwoWord(null);
+        gameState.setPlayerOneWord(null);
+        gameState.setPlayerTwoWord(new WordChoice(candidate.toUpperCase(), model.Enums.WordSource.rollTheDice));
         return gameState;
     }
 
-    public GuessResult submitGuess(GamePlayer player, String guess) {
+    public String pickWord(WordLength wordLength) {
+        String[] words = WORD_BANK.get(wordLength);
+        if (words == null || words.length == 0) {
+            throw new IllegalStateException("No words available for length " + wordLength.length());
+        }
+        int idx = random.nextInt(words.length);
+        return words[idx];
+    }
+
+    public GuessResult submitGuess(GamePlayer player, String rawGuess) {
         if (gameState == null) {
-            throw new IllegalStateException("No active game");
+            throw new IllegalStateException("Start a new game first.");
         }
         if (player == null) {
-            throw new IllegalArgumentException("Player must not be null");
-        }
-        if (guess == null) {
-            throw new IllegalArgumentException("Guess must not be null");
+            throw new IllegalArgumentException("Player must not be null.");
         }
         if (gameState.getStatus() == GameStatus.finished) {
-            throw new IllegalStateException("Game is finished");
+            throw new IllegalStateException("Game finished. Start a new word.");
         }
 
+        // --- Input validation and processing ---
+        var upper = rawGuess == null ? "" : rawGuess.trim().toUpperCase();
+        var guess = upper.replaceAll("[^A-Z]", "");
+        int expectedLength = gameState.getWordLength().length();
+
+        if (guess.isEmpty()) {
+            throw new IllegalArgumentException("Enter a guess first.");
+        }
+        if (guess.length() != expectedLength) {
+            throw new IllegalArgumentException("Guess must be " + expectedLength + " letters.");
+        }
 
         WordChoice targetChoice = gameState.wordFor(player);
         if (targetChoice == null || targetChoice.word() == null) {
-            throw new IllegalStateException("Target word is not set for this player");
+            throw new IllegalStateException("Target word is not set for this player.");
         }
-
         String target = targetChoice.word().trim();
-        String trimmedGuess = guess.trim();
-        if (target.isEmpty() || trimmedGuess.isEmpty()) {
-            throw new IllegalArgumentException("Words must not be empty");
-        }
 
-        int expectedLength = gameState.getWordLength().length();
-        if (trimmedGuess.length() != expectedLength) {
-            throw new IllegalArgumentException("Guess must be " + expectedLength + " characters long");
-        }
-        if (target.length() != expectedLength) {
-            throw new IllegalStateException("Target word length does not match game setting");
-        }
-
+        // --- Evaluate the guess ---
         GuessResult result;
         Difficulty difficulty = gameState.getDifficulty();
         switch (difficulty) {
-            case normal -> result = evaluateNormal(trimmedGuess, target);
-            case hard -> result = evaluateHard(trimmedGuess, target);
-            case expert -> result = evaluateExpert(trimmedGuess, target);
+            case normal -> result = evaluateNormal(guess, target);
+            case hard -> result = evaluateHard(guess, target);
+            case expert -> result = evaluateExpert(guess, target);
             default -> throw new IllegalStateException("Unhandled difficulty: " + difficulty);
         }
 
         GuessEntry entry = new GuessEntry(player, result, System.currentTimeMillis());
         gameState.addGuess(entry);
 
+        // --- State transition logic ---
+        // If solo mode, the logic is simple.
+        if (gameState.getMode() == GameMode.solo) {
+            if (result.exactMatch()) {
+                gameState.setWinner(player);
+                gameState.setStatus(GameStatus.finished);
+            }
+            // In solo mode, the turn doesn't switch.
+            return result;
+        }
+
+        // --- Multiplayer Logic ---
+        GamePlayer opponent = gameState.getOpponent(player);
+        boolean isFinalGuess = gameState.getPlayerFinishState(opponent) != FinishState.NOT_FINISHED;
+
         if (result.exactMatch()) {
-        	gameState.setWinner(player);
-            gameState.setStatus(GameStatus.finished);
-        } else {
-            gameState.switchTurn();
+            gameState.setPlayerFinishState(player, FinishState.FINISHED_SUCCESS);
+            if (isFinalGuess) {
+                // Second player just finished successfully.
+                gameState.setStatus(GameStatus.finished);
+                // If opponent also succeeded, it's a tie. Otherwise, current player wins.
+                if (gameState.getPlayerFinishState(opponent) == FinishState.FINISHED_SUCCESS) {
+                    gameState.setWinner(null); // Tie
+                } else {
+                    gameState.setWinner(player);
+                }
+            } else {
+                // First player just finished successfully. Wait for opponent.
+                gameState.setStatus(GameStatus.waitingForFinalGuess);
+                gameState.switchTurn();
+            }
+        } else { // Incorrect guess
+            if (isFinalGuess) {
+                // Second player just failed on their last chance.
+                gameState.setPlayerFinishState(player, FinishState.FINISHED_FAIL);
+                gameState.setStatus(GameStatus.finished);
+                // Opponent is the winner.
+                gameState.setWinner(opponent);
+            } else {
+                // Normal incorrect guess.
+                gameState.switchTurn();
+            }
         }
 
         return result;
@@ -142,8 +185,47 @@ public class GameController {
     }
 
     private GuessResult evaluateExpert(String guess, String target) {
-        // Expert returns the same feedback as normal; tweak here if expert should hide feedback.
-        return evaluateNormal(guess, target);
+        int correctLetterCount = evaluateOnlyCorrectCount(guess, target);
+        boolean exactMatch = guess.equalsIgnoreCase(target);
+        return new GuessResult(guess, List.of(), correctLetterCount, exactMatch); // Empty feedback for expert mode
+    }
+
+    private int evaluateOnlyCorrectCount(String guess, String target) {
+        int length = guess.length();
+        char[] guessChars = guess.toLowerCase().toCharArray();
+        char[] targetChars = target.toLowerCase().toCharArray();
+        boolean[] usedInTarget = new boolean[length];
+
+        int correctLetterCount = 0;
+
+        // First pass: check for correct position matches
+        for (int i = 0; i < length; i++) {
+            if (guessChars[i] == targetChars[i]) {
+                usedInTarget[i] = true;
+                correctLetterCount++;
+            }
+        }
+
+        // Second pass: check for letters present in the word but wrong position
+        for (int i = 0; i < length; i++) {
+            // Only consider letters not already matched in the correct position
+            if (guessChars[i] == targetChars[i]) { // This letter already handled in first pass
+                continue;
+            }
+            char c = guessChars[i];
+            int foundIndex = -1;
+            for (int j = 0; j < length; j++) {
+                if (!usedInTarget[j] && targetChars[j] == c) {
+                    foundIndex = j;
+                    break;
+                }
+            }
+            if (foundIndex >= 0) {
+                usedInTarget[foundIndex] = true;
+                correctLetterCount++;
+            }
+        }
+        return correctLetterCount;
     }
 
     private GuessResult evaluateWithFeedback(String guess,
@@ -197,4 +279,12 @@ public class GameController {
     }
 
     GameState gameState;
+
+    private static final Map<WordLength, String[]> WORD_BANK = Map.of(
+            WordLength.three, new String[]{"CAT", "SUN", "MAP"},
+            WordLength.four, new String[]{"TREE", "LION", "BOAT"},
+            WordLength.five, new String[]{"APPLE", "GRAPE", "PLANE", "BREAD"},
+            WordLength.six, new String[]{"ORANGE", "PLANET", "STREAM"}
+    );
+    private final Random random = new Random();
 }
