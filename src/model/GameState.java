@@ -117,7 +117,7 @@ public class GameState {
             return null;
         }
         var isPlayerOne = Objects.equals(player, playerOne);
-        return isPlayerOne ? playerTwoWord : playerOneWord;
+        return isPlayerOne ? playerOneWord : playerTwoWord;
     }
 
     final String id;

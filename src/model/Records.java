@@ -45,7 +45,7 @@ public final class Records {
 
         @Override
         public List<LetterFeedback> feedback() {
-            return new ArrayList<>(feedback);
+            return List.copyOf(feedback);
         }
     }
 
