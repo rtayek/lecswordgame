@@ -130,6 +130,8 @@ class MultiplayerGamePanel extends JPanel {
 
             updateCurrentPlayerLabel();
             submitButton.setEnabled(true);
+            guessField.setEnabled(state.getStatus() != GameStatus.finished);
+
 
         } catch (RuntimeException ex) {
             setStatus("Error: " + ex.getMessage());
@@ -156,10 +158,20 @@ class MultiplayerGamePanel extends JPanel {
         }
 
         if (state.getStatus() == GameStatus.finished) {
-            currentPlayerLabel.setText("Game finished.");
+            var winner = state.getWinner();
+            if (winner == null) {
+                currentPlayerLabel.setText("Game finished.");
+            } else {
+                var name = winner.profile() != null ? winner.profile().username() : null;
+                if (name == null || name.isBlank()) {
+                    name = winner == state.getPlayerOne() ? "Player 1" : "Player 2";
+                }
+                currentPlayerLabel.setText(name + " wins!");
+            }
             submitButton.setEnabled(false);
             return;
         }
+
 
         var player = state.getCurrentTurn();
         if (player == null || player.profile() == null) {

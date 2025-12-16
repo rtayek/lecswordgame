@@ -108,6 +108,14 @@ public class GameState {
         }
     }
 
+    public GamePlayer getWinner() {
+        return winner;
+    }
+
+    public void setWinner(GamePlayer winner) {
+        this.winner = winner;
+    }
+
     public void addGuess(GuessEntry entry) {
         guesses.add(entry);
     }
@@ -132,4 +140,5 @@ public class GameState {
     GameStatus status;
     GamePlayer currentTurn;
     final List<GuessEntry> guesses;
+    GamePlayer winner;
 }

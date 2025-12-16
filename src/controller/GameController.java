@@ -59,8 +59,8 @@ public class GameController {
                 null
         );
         gameState.setStatus(GameStatus.inProgress);
-        gameState.setPlayerTwoWord(new WordChoice(trimmedTarget, model.Enums.WordSource.rollTheDice));
-        gameState.setPlayerOneWord(null);
+        gameState.setPlayerOneWord(new WordChoice(trimmedTarget, model.Enums.WordSource.rollTheDice));
+        gameState.setPlayerTwoWord(null);
         return gameState;
     }
 
@@ -74,6 +74,10 @@ public class GameController {
         if (guess == null) {
             throw new IllegalArgumentException("Guess must not be null");
         }
+        if (gameState.getStatus() == GameStatus.finished) {
+            throw new IllegalStateException("Game is finished");
+        }
+
 
         WordChoice targetChoice = gameState.wordFor(player);
         if (targetChoice == null || targetChoice.word() == null) {
@@ -107,6 +111,7 @@ public class GameController {
         gameState.addGuess(entry);
 
         if (result.exactMatch()) {
+        	gameState.setWinner(player);
             gameState.setStatus(GameStatus.finished);
         } else {
             gameState.switchTurn();
