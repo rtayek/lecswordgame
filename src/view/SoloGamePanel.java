@@ -10,9 +10,9 @@ import javax.swing.JTextField;
 import model.Enums.Difficulty;
 import model.Enums.TimerDuration;
 import model.Enums.WordLength;
-import model.GamePlayer;
-import model.PlayerProfile;
-import model.GuessResult;
+import model.Records.GamePlayer;
+import model.Records.GuessResult;
+import model.Records.PlayerProfile;
 
 class SoloGamePanel extends JPanel {
 
@@ -85,13 +85,13 @@ class SoloGamePanel extends JPanel {
 
         try {
             GuessResult result = gameController.submitGuess(player, guess);
-            grid.addGuessRow(new GuessRowPanel(result.getGuess(), result.getFeedback()));
+            grid.addGuessRow(new GuessRowPanel(result.guess(), result.feedback()));
             guessField.setText("");
 
-            if (result.isExactMatch()) {
+            if (result.exactMatch()) {
                 setStatus("You solved it!");
             } else {
-                setStatus(result.getCorrectLetterCount() + " letters are correct.");
+                setStatus(result.correctLetterCount() + " letters are correct.");
             }
         } catch (RuntimeException ex) {
             setStatus("Error: " + ex.getMessage());

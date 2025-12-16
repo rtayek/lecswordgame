@@ -8,7 +8,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-import model.GamePlayer;
+import model.Records.GamePlayer;
 import model.Enums.GameStatus;
 
 class MultiplayerGamePanel extends JPanel {
@@ -120,9 +120,9 @@ class MultiplayerGamePanel extends JPanel {
             var result = gameController.submitGuess(current, guess);
 
             if (current == state.getPlayerOne()) {
-                leftGrid.addGuessRow(new GuessRowPanel(result.getGuess(), result.getFeedback()));
+                leftGrid.addGuessRow(new GuessRowPanel(result.guess(), result.feedback()));
             } else {
-                rightGrid.addGuessRow(new GuessRowPanel(result.getGuess(), result.getFeedback()));
+                rightGrid.addGuessRow(new GuessRowPanel(result.guess(), result.feedback()));
             }
 
             guessField.setText("");
@@ -162,13 +162,13 @@ class MultiplayerGamePanel extends JPanel {
         }
 
         var player = state.getCurrentTurn();
-        if (player == null || player.getProfile() == null) {
+        if (player == null || player.profile() == null) {
             currentPlayerLabel.setText("Current player: (none)");
             submitButton.setEnabled(false);
             return;
         }
 
-        var name = player.getProfile().getUsername();
+        var name = player.profile().username();
         if (name == null || name.isBlank()) {
             name = player == state.getPlayerOne() ? "Player 1" : "Player 2";
         }
@@ -187,8 +187,8 @@ class MultiplayerGamePanel extends JPanel {
             var p1 = state.getPlayerOne();
             var p2 = state.getPlayerTwo();
 
-            var name1 = p1 != null && p1.getProfile() != null ? p1.getProfile().getUsername() : null;
-            var name2 = p2 != null && p2.getProfile() != null ? p2.getProfile().getUsername() : null;
+            var name1 = p1 != null && p1.profile() != null ? p1.profile().username() : null;
+            var name2 = p2 != null && p2.profile() != null ? p2.profile().username() : null;
 
             if (name1 == null || name1.isBlank()) {
                 name1 = "Player 1";

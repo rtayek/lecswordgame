@@ -6,8 +6,13 @@ import java.awt.GridLayout;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import model.*;
-import model.Enums.*;
+import model.Enums.Difficulty;
+import model.Enums.TimerDuration;
+import model.Enums.WordLength;
+import model.Enums.WordSource;
+import model.Records.GamePlayer;
+import model.Records.PlayerProfile;
+import model.Records.WordChoice;
 
 class GameSetupPanel extends JPanel {
 

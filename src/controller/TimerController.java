@@ -2,7 +2,7 @@ package controller;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import model.GamePlayer;
+import model.Records.GamePlayer;
 class TimerController {
 	interface Listener {
 		void onTimeUpdated(GamePlayer player,int remainingSeconds);

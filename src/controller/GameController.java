@@ -3,17 +3,9 @@ package controller;
 import java.util.ArrayList;
 import java.util.List;
 
-import model.Enums.Difficulty;
-import model.Enums.GameMode;
-import model.Enums.GameStatus;
-import model.Enums.TimerDuration;
-import model.Enums.WordLength;
-import model.Enums.LetterFeedback;
-import model.GamePlayer;
+import model.Enums.*;
 import model.GameState;
-import model.GuessEntry;
-import model.GuessResult;
-import model.WordChoice;
+import model.Records.*;
 
 public class GameController {
 
@@ -84,11 +76,11 @@ public class GameController {
         }
 
         WordChoice targetChoice = gameState.wordFor(player);
-        if (targetChoice == null || targetChoice.getWord() == null) {
+        if (targetChoice == null || targetChoice.word() == null) {
             throw new IllegalStateException("Target word is not set for this player");
         }
 
-        String target = targetChoice.getWord().trim();
+        String target = targetChoice.word().trim();
         String trimmedGuess = guess.trim();
         if (target.isEmpty() || trimmedGuess.isEmpty()) {
             throw new IllegalArgumentException("Words must not be empty");
@@ -114,7 +106,7 @@ public class GameController {
         GuessEntry entry = new GuessEntry(player, result, System.currentTimeMillis());
         gameState.addGuess(entry);
 
-        if (result.isExactMatch()) {
+        if (result.exactMatch()) {
             gameState.setStatus(GameStatus.finished);
         } else {
             gameState.switchTurn();

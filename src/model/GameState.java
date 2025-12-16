@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import model.Enums.*;
+import model.Records.GamePlayer;
+import model.Records.GuessEntry;
+import model.Records.WordChoice;
 
 public class GameState {
 

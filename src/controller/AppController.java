@@ -2,8 +2,8 @@ package controller;
 
 import java.util.ArrayList;
 import java.util.List;
-import model.GameLogEntry;
-import model.PlayerProfile;
+import model.Records.GameLogEntry;
+import model.Records.PlayerProfile;
 
 public class AppController {
 
