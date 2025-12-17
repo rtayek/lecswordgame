@@ -1,15 +1,37 @@
 package view;
 
 import java.awt.Color;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import model.Enums.Difficulty;
 import model.Enums.LetterFeedback;
+import model.Records.GuessResult;
 
 class GuessRowPanel extends JPanel {
 
-    GuessRowPanel(String guess, java.util.List<LetterFeedback> feedback) {
+    GuessRowPanel(GuessResult result, Difficulty difficulty) {
+        if (difficulty == Difficulty.expert) {
+            setupExpert(result);
+        } else {
+            setupNormal(result);
+        }
+    }
+
+    private void setupExpert(GuessResult result) {
+        setLayout(new FlowLayout(FlowLayout.LEFT));
+        var label = new JLabel(
+            "%s [%d]".formatted(result.guess(), result.correctLetterCount())
+        );
+        label.setFont(new Font("SansSerif", Font.BOLD, 22));
+        add(label);
+    }
+
+    private void setupNormal(GuessResult result) {
+        var guess = result.guess();
+        var feedback = result.feedback();
         setLayout(new GridLayout(1, guess.length(), 5, 5));
 
         for (int i = 0; i < guess.length(); i++) {

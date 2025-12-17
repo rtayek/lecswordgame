@@ -31,21 +31,9 @@ class GameSetupPanel extends JPanel {
             var playerOne = new GamePlayer(new PlayerProfile("Player 1", ""), true);
             var playerTwo = new GamePlayer(new PlayerProfile("Player 2", ""), true);
 
-            var difficulty = Difficulty.normal;
-            var wordLength = WordLength.five;
-            var timerDuration = TimerDuration.none;
-            
-            var config = new GameConfig(GameMode.multiplayer, difficulty, wordLength, timerDuration, playerOne, playerTwo);
-
-            var wordOneStr = gameController.pickWord(wordLength);
-            var wordTwoStr = gameController.pickWord(wordLength);
-            if (wordTwoStr.equals(wordOneStr)) {
-                wordTwoStr = gameController.pickWord(wordLength);
-            }
-            var wordOne = new WordChoice(wordOneStr, WordSource.rollTheDice);
-            var wordTwo = new WordChoice(wordTwoStr, WordSource.rollTheDice);
-
-            var state = gameController.startNewGame(config, wordOne, wordTwo);
+            var config = createConfig(GameMode.multiplayer, playerOne, playerTwo);
+            var words = pickWords(config.wordLength(), 2);
+            var state = gameController.startNewGame(config, words[0], words[1]);
 
             navigation.setGameState(state);
             navigation.showMultiplayerGame();
@@ -54,15 +42,9 @@ class GameSetupPanel extends JPanel {
         var solo = new JButton("Start Solo");
         solo.addActionListener(e -> {
             var player = new GamePlayer(new PlayerProfile("You", ""), true);
-            var difficulty = Difficulty.normal;
-            var wordLength = WordLength.five;
-            var timer = TimerDuration.none;
-
-            var config = new GameConfig(GameMode.solo, difficulty, wordLength, timer, player, null);
-            var targetWord = gameController.pickWord(wordLength);
-            var wordChoice = new WordChoice(targetWord, WordSource.rollTheDice);
-
-            var state = gameController.startNewGame(config, null, wordChoice);
+            var config = GameConfig.withDefaults(GameMode.solo, player, null);
+            var words = pickWords(config.wordLength(), 1);
+            var state = gameController.startNewGame(config, null, words[0]);
             
             navigation.setGameState(state);
             navigation.showSoloGame();
@@ -77,6 +59,24 @@ class GameSetupPanel extends JPanel {
         add(back, BorderLayout.SOUTH);
     }
     
+    private GameConfig createConfig(GameMode mode, GamePlayer playerOne, GamePlayer playerTwo) {
+        return GameConfig.withDefaults(mode, playerOne, playerTwo);
+    }
+
+    private WordChoice[] pickWords(WordLength length, int count) {
+        WordChoice[] choices = new WordChoice[count];
+        for (int i = 0; i < count; i++) {
+            String word;
+            int attempts = 0;
+            do {
+                word = gameController.pickWord(length);
+                attempts++;
+            } while (i > 0 && word.equalsIgnoreCase(choices[i - 1].word()) && attempts < 3);
+            choices[i] = new WordChoice(word, WordSource.rollTheDice);
+        }
+        return choices;
+    }
+
     private final Navigation navigation;
     private final GameController gameController;
     static final long serialVersionUID = 1L;

@@ -2,17 +2,24 @@ package controller;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import model.Enums.*;
-import model.GameState.GameConfig;
+import model.Enums.Difficulty;
+import model.Enums.GameMode;
+import model.Enums.LetterFeedback;
+import model.Enums.GameStatus;
 import model.GameState;
+import model.GameState.GameConfig;
 import model.Records.GamePlayer;
 import model.Records.GuessEntry;
 import model.Records.GuessResult;
 import model.Records.WordChoice;
 
 public class GameController {
+
+    private final DictionaryService dictionaryService;
+
+    public GameController(DictionaryService dictionaryService) {
+        this.dictionaryService = dictionaryService;
+    }
 
     public GameState startNewGame(GameConfig config, WordChoice playerOneWord, WordChoice playerTwoWord) {
         var gameState = new GameState(config);
@@ -22,13 +29,8 @@ public class GameController {
         return gameState;
     }
 
-    public String pickWord(WordLength wordLength) {
-        String[] words = dictionary.get(wordLength);
-        if (words == null || words.length == 0) {
-            throw new IllegalStateException("No words available for length " + wordLength.length());
-        }
-        int idx = random.nextInt(words.length);
-        return words[idx];
+    public String pickWord(model.Enums.WordLength wordLength) {
+        return dictionaryService.pickWord(wordLength);
     }
 
     public GameState submitGuess(GameState gameState, GamePlayer player, String rawGuess) {
@@ -74,152 +76,116 @@ public class GameController {
         gameState.addGuess(entry);
 
         // --- State transition logic ---
-        if (gameState.getMode() == GameMode.solo) {
-            if (result.exactMatch()) {
-                gameState.setWinner(player);
-                gameState.setStatus(GameStatus.finished);
-            }
-            return gameState;
-        }
-
-        // --- Multiplayer Logic ---
-        GamePlayer opponent = gameState.getOpponent(player);
-        boolean isFinalGuess = gameState.getPlayerFinishState(opponent) != FinishState.NOT_FINISHED;
-
-        if (result.exactMatch()) {
-            gameState.setPlayerFinishState(player, FinishState.FINISHED_SUCCESS);
-            if (isFinalGuess) {
-                gameState.setStatus(GameStatus.finished);
-                if (gameState.getPlayerFinishState(opponent) == FinishState.FINISHED_SUCCESS) {
-                    gameState.setWinner(null); // Tie
-                } else {
-                    gameState.setWinner(player);
-                }
-            } else {
-                gameState.setStatus(GameStatus.waitingForFinalGuess);
-                gameState.switchTurn();
-            }
-        } else { // Incorrect guess
-            if (isFinalGuess) {
-                gameState.setPlayerFinishState(player, FinishState.FINISHED_FAIL);
-                gameState.setStatus(GameStatus.finished);
-                gameState.setWinner(opponent);
-            } else {
-                gameState.switchTurn();
-            }
-        }
+        gameState.applyGuessResult(player, result);
         return gameState;
     }
 
     private GuessResult evaluateNormal(String guess, String target) {
-        return evaluateWithFeedback(
-                guess,
-                target,
-                LetterFeedback.correctPosition,
-                LetterFeedback.wrongPosition,
-                LetterFeedback.notInWord
-        );
-    }
-
-    private GuessResult evaluateHard(String guess, String target) {
-        return evaluateWithFeedback(
-                guess,
-                target,
-                LetterFeedback.usedPresent,
-                LetterFeedback.usedPresent,
-                LetterFeedback.notInWord
-        );
-    }
-
-    private GuessResult evaluateExpert(String guess, String target) {
-        int correctLetterCount = evaluateOnlyCorrectCount(guess, target);
-        boolean exactMatch = guess.equalsIgnoreCase(target);
-        return new GuessResult(guess, List.of(), correctLetterCount, exactMatch);
-    }
-
-    private int evaluateOnlyCorrectCount(String guess, String target) {
-        int length = guess.length();
-        char[] guessChars = guess.toLowerCase().toCharArray();
-        char[] targetChars = target.toLowerCase().toCharArray();
-        boolean[] usedInTarget = new boolean[length];
+        List<EvaluatedLetter> evaluatedLetters = evaluateCore(guess, target);
+        List<LetterFeedback> feedback = new ArrayList<>();
         int correctLetterCount = 0;
+        boolean exactMatch = true;
 
-        for (int i = 0; i < length; i++) {
-            if (guessChars[i] == targetChars[i]) {
-                usedInTarget[i] = true;
+        for (EvaluatedLetter el : evaluatedLetters) {
+            if (el.type() == MatchResultType.CORRECT_POSITION) {
+                feedback.add(LetterFeedback.correctPosition);
                 correctLetterCount++;
-            }
-        }
-
-        for (int i = 0; i < length; i++) {
-            if (guessChars[i] == targetChars[i]) continue;
-            char c = guessChars[i];
-            int foundIndex = -1;
-            for (int j = 0; j < length; j++) {
-                if (!usedInTarget[j] && targetChars[j] == c) {
-                    foundIndex = j;
-                    break;
-                }
-            }
-            if (foundIndex >= 0) {
-                usedInTarget[foundIndex] = true;
-                correctLetterCount++;
-            }
-        }
-        return correctLetterCount;
-    }
-
-    private GuessResult evaluateWithFeedback(String guess,
-                                             String target,
-                                             LetterFeedback hitFeedback,
-                                             LetterFeedback presentFeedback,
-                                             LetterFeedback absentFeedback) {
-        int length = guess.length();
-        List<LetterFeedback> feedback = new ArrayList<>(length);
-        for (int i = 0; i < length; i++) {
-            feedback.add(LetterFeedback.unused);
-        }
-
-        char[] guessChars = guess.toLowerCase().toCharArray();
-        char[] targetChars = target.toLowerCase().toCharArray();
-        boolean[] usedInTarget = new boolean[length];
-        int correctLetterCount = 0;
-
-        for (int i = 0; i < length; i++) {
-            if (guessChars[i] == targetChars[i]) {
-                feedback.set(i, hitFeedback);
-                usedInTarget[i] = true;
-                correctLetterCount++;
-            }
-        }
-
-        for (int i = 0; i < length; i++) {
-            if (feedback.get(i) != LetterFeedback.unused) continue;
-            char c = guessChars[i];
-            int foundIndex = -1;
-            for (int j = 0; j < length; j++) {
-                if (!usedInTarget[j] && targetChars[j] == c) {
-                    foundIndex = j;
-                    break;
-                }
-            }
-            if (foundIndex >= 0) {
-                feedback.set(i, presentFeedback);
-                usedInTarget[foundIndex] = true;
-                correctLetterCount++;
+            } else if (el.type() == MatchResultType.WRONG_POSITION) {
+                feedback.add(LetterFeedback.wrongPosition);
+                correctLetterCount++; // Still "correct" in terms of being present
+                exactMatch = false;
             } else {
-                feedback.set(i, absentFeedback);
+                feedback.add(LetterFeedback.notInWord);
+                exactMatch = false;
             }
         }
-        boolean exactMatch = guess.equalsIgnoreCase(target);
         return new GuessResult(guess, feedback, correctLetterCount, exactMatch);
     }
 
-    private static final Map<WordLength, String[]> dictionary = Map.of(
-            WordLength.three, new String[]{"CAT", "SUN", "MAP"},
-            WordLength.four, new String[]{"TREE", "LION", "BOAT"},
-            WordLength.five, new String[]{"APPLE", "GRAPE", "PLANE", "BREAD"},
-            WordLength.six, new String[]{"ORANGE", "PLANET", "STREAM"}
-    );
-    private final Random random = new Random();
+    private GuessResult evaluateHard(String guess, String target) {
+        List<EvaluatedLetter> evaluatedLetters = evaluateCore(guess, target);
+        List<LetterFeedback> feedback = new ArrayList<>();
+        int correctLetterCount = 0;
+        boolean exactMatch = true;
+
+        for (EvaluatedLetter el : evaluatedLetters) {
+            if (el.type() == MatchResultType.CORRECT_POSITION || el.type() == MatchResultType.WRONG_POSITION) {
+                feedback.add(LetterFeedback.usedPresent); // Same feedback for correct/wrong position
+                correctLetterCount++;
+                if (el.type() == MatchResultType.WRONG_POSITION) {
+                    exactMatch = false;
+                }
+            } else {
+                feedback.add(LetterFeedback.notInWord);
+                exactMatch = false;
+            }
+        }
+        return new GuessResult(guess, feedback, correctLetterCount, exactMatch);
+    }
+
+    private GuessResult evaluateExpert(String guess, String target) {
+        List<EvaluatedLetter> evaluatedLetters = evaluateCore(guess, target);
+        int correctLetterCount = 0;
+        boolean exactMatch = true;
+
+        for (EvaluatedLetter el : evaluatedLetters) {
+            if (el.type() == MatchResultType.CORRECT_POSITION || el.type() == MatchResultType.WRONG_POSITION) {
+                correctLetterCount++;
+                if (el.type() == MatchResultType.WRONG_POSITION) {
+                    exactMatch = false;
+                }
+            } else {
+                exactMatch = false;
+            }
+        }
+        return new GuessResult(guess, List.of(), correctLetterCount, exactMatch);
+    }
+
+    private List<EvaluatedLetter> evaluateCore(String guess, String target) {
+        int length = guess.length();
+        List<EvaluatedLetter> evaluated = new ArrayList<>(length);
+        char[] guessChars = guess.toLowerCase().toCharArray();
+        char[] targetChars = target.toLowerCase().toCharArray();
+        boolean[] usedInTarget = new boolean[length]; // Tracks which target chars have been matched
+
+        // First pass: Find CORRECT_POSITION matches
+        for (int i = 0; i < length; i++) {
+            if (guessChars[i] == targetChars[i]) {
+                evaluated.add(new EvaluatedLetter(guessChars[i], MatchResultType.CORRECT_POSITION));
+                usedInTarget[i] = true;
+            } else {
+                evaluated.add(null); // Placeholder for now, will be filled in second pass
+            }
+        }
+
+        // Second pass: Find WRONG_POSITION or NOT_IN_WORD matches
+        for (int i = 0; i < length; i++) {
+            if (evaluated.get(i) != null) { // Already matched in correct position
+                continue;
+            }
+
+            char c = guessChars[i];
+            boolean found = false;
+            for (int j = 0; j < length; j++) {
+                if (!usedInTarget[j] && targetChars[j] == c) {
+                    evaluated.set(i, new EvaluatedLetter(c, MatchResultType.WRONG_POSITION));
+                    usedInTarget[j] = true;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                evaluated.set(i, new EvaluatedLetter(c, MatchResultType.NOT_IN_WORD));
+            }
+        }
+        return evaluated;
+    }
+
+    private enum MatchResultType {
+        CORRECT_POSITION,
+        WRONG_POSITION,
+        NOT_IN_WORD
+    }
+
+    private record EvaluatedLetter(char letter, MatchResultType type) {}
 }

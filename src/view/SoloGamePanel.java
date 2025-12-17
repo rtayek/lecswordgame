@@ -79,13 +79,18 @@ class SoloGamePanel extends JPanel {
             var guesses = newGameState.getGuesses();
             if (!guesses.isEmpty()) {
                 GuessResult result = guesses.get(guesses.size() - 1).result();
-                grid.addGuessRow(new GuessRowPanel(result.guess(), result.feedback()));
+                var difficulty = newGameState.getDifficulty();
+                grid.addGuessRow(new GuessRowPanel(result, difficulty));
                 guessField.setText("");
 
                 if (result.exactMatch()) {
                     setStatus("You solved it!");
                 } else {
-                    setStatus(result.correctLetterCount() + " letters are correct.");
+                    if (difficulty == Difficulty.expert) {
+                        setStatus("Correct letters: " + result.correctLetterCount());
+                    } else {
+                        setStatus(result.correctLetterCount() + " letters are correct.");
+                    }
                 }
             }
         } catch (IllegalStateException | IllegalArgumentException ex) {

@@ -9,7 +9,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import model.Records.GamePlayer;
-import model.Enums.GameStatus;
+import model.Enums.*;
 
 class MultiplayerGamePanel extends JPanel {
 
@@ -112,12 +112,14 @@ class MultiplayerGamePanel extends JPanel {
             var guesses = newGameState.getGuesses();
             if (!guesses.isEmpty()) {
                 var result = guesses.get(guesses.size() - 1).result();
+                var difficulty = newGameState.getDifficulty();
                 if (current == newGameState.getPlayerOne()) {
-                    leftGrid.addGuessRow(new GuessRowPanel(result.guess(), result.feedback()));
+                    leftGrid.addGuessRow(new GuessRowPanel(result, difficulty));
                 } else {
-                    rightGrid.addGuessRow(new GuessRowPanel(result.guess(), result.feedback()));
+                    rightGrid.addGuessRow(new GuessRowPanel(result, difficulty));
                 }
             }
+
 
             guessField.setText("");
             setStatus(" ");

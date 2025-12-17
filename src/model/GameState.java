@@ -13,20 +13,25 @@ import model.Enums.WordLength;
 import model.Records.GamePlayer;
 import model.Records.GuessEntry;
 import model.Records.WordChoice;
+import model.Records.GuessResult;
 
 /**
  * Represents the live, mutable state of a game in progress.
  * It holds a reference to the immutable GameConfig and manages data that changes on each turn.
  */
 public class GameState {
-	public static record GameConfig(
-		    GameMode mode,
-		    Difficulty difficulty,
-		    WordLength wordLength,
-		    TimerDuration timerDuration,
-		    GamePlayer playerOne,
-		    GamePlayer playerTwo
-		) {}
+    public static record GameConfig(
+            GameMode mode,
+            Difficulty difficulty,
+            WordLength wordLength,
+            TimerDuration timerDuration,
+            GamePlayer playerOne,
+            GamePlayer playerTwo
+        ) {
+        public static GameConfig withDefaults(GameMode mode, GamePlayer playerOne, GamePlayer playerTwo) {
+            return new GameConfig(mode, Difficulty.normal, WordLength.five, TimerDuration.none, playerOne, playerTwo);
+        }
+    }
 
     public GameState(GameConfig config) {
         this.id = UUID.randomUUID().toString();
@@ -97,10 +102,12 @@ public class GameState {
     }
 
     public void setPlayerOneWord(WordChoice playerOneWord) {
+        validateWordLength(playerOneWord);
         this.playerOneWord = playerOneWord;
     }
 
     public void setPlayerTwoWord(WordChoice playerTwoWord) {
+        validateWordLength(playerTwoWord);
         this.playerTwoWord = playerTwoWord;
     }
 
@@ -147,6 +154,57 @@ public class GameState {
     public FinishState getPlayerFinishState(GamePlayer player) {
         if (player == null) return FinishState.NOT_FINISHED;
         return Objects.equals(player, config.playerOne()) ? playerOneFinishState : playerTwoFinishState;
+    }
+
+    public void applyGuessResult(GamePlayer player, GuessResult result) {
+        if (result == null) {
+            return;
+        }
+
+        if (getMode() == GameMode.solo) {
+            if (result.exactMatch()) {
+                setWinner(player);
+                setStatus(GameStatus.finished);
+            }
+            return;
+        }
+
+        GamePlayer opponent = getOpponent(player);
+        boolean isFinalGuess = getPlayerFinishState(opponent) != FinishState.NOT_FINISHED;
+
+        if (result.exactMatch()) {
+            setPlayerFinishState(player, FinishState.FINISHED_SUCCESS);
+            if (isFinalGuess) {
+                setStatus(GameStatus.finished);
+                if (getPlayerFinishState(opponent) == FinishState.FINISHED_SUCCESS) {
+                    setWinner(null); // Tie
+                } else {
+                    setWinner(player);
+                }
+            } else {
+                setStatus(GameStatus.waitingForFinalGuess);
+                switchTurn();
+            }
+        } else {
+            if (isFinalGuess) {
+                setPlayerFinishState(player, FinishState.FINISHED_FAIL);
+                setStatus(GameStatus.finished);
+                setWinner(opponent);
+            } else {
+                switchTurn();
+            }
+        }
+    }
+
+    private void validateWordLength(WordChoice wordChoice) {
+        if (wordChoice == null || wordChoice.word() == null) {
+            return;
+        }
+        if (wordChoice.word().length() != config.wordLength().length()) {
+            throw new IllegalArgumentException(
+                    "Word '%s' must be %d letters long".formatted(wordChoice.word(), config.wordLength().length())
+            );
+        }
     }
 
     final String id;
