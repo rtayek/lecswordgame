@@ -5,8 +5,8 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
-import java.awt.Image;
-import java.net.URL;
+// import java.awt.Image; // Removed: no longer needed for manual scaling
+// import java.net.URL; // Removed: ResourceLoader handles URL
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -17,6 +17,8 @@ import model.Enums.WordSource;
 import model.GameState.GameConfig;
 import model.Records.GamePlayer;
 import model.Records.WordChoice;
+import util.Constants;
+import util.ResourceLoader; // Added: Import ResourceLoader
 
 class WordSelectionPanel extends JPanel {
 
@@ -62,13 +64,11 @@ class WordSelectionPanel extends JPanel {
 
         // Roll the Dice button
         rollTheDiceButton = new JButton("Roll the Dice");
-        URL diceImageUrl = getClass().getResource("/main/resources/dice_icon.png"); // Assuming a dice icon
-        if (diceImageUrl != null) {
-            ImageIcon originalIcon = new ImageIcon(diceImageUrl);
-            Image scaledImage = originalIcon.getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH);
-            rollTheDiceButton.setIcon(new ImageIcon(scaledImage));
+        ImageIcon diceIcon = ResourceLoader.getImageIcon("dice_icon.png", 20, 20).orElse(null); // Use ResourceLoader and handle Optional
+        if (diceIcon != null) {
+            rollTheDiceButton.setIcon(diceIcon);
         } else {
-            System.err.println("Dice icon image not found at /main/resources/dice_icon.png");
+            // Error message is handled by ResourceLoader
         }
         rollTheDiceButton.addActionListener(e -> rollTheDice());
         centerPanel.add(rollTheDiceButton);

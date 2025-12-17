@@ -1,7 +1,8 @@
 package view;
 
 import java.awt.Color;
-import java.awt.GridLayout;
+import java.awt.FlowLayout; // Import FlowLayout
+import javax.swing.BoxLayout; // Import BoxLayout
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -19,15 +20,15 @@ class KeyboardPanel extends JPanel {
 
     KeyboardPanel(Consumer<Character> onKey) {
         this.onKey = onKey;
-        setLayout(new GridLayout(3, 10, 4, 4)); // Adjusted for a more standard QWERTY layout representation
+        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS)); // Change to BoxLayout
 
         String[] row1 = {"Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"};
         String[] row2 = {"A", "S", "D", "F", "G", "H", "J", "K", "L"};
         String[] row3 = {"Z", "X", "C", "V", "B", "N", "M"};
 
-        createKeys(row1);
-        createKeys(row2);
-        createKeys(row3);
+        add(createRowPanel(row1));
+        add(createRowPanel(row2));
+        add(createRowPanel(row3));
         
         // Initialize all letters as unused
         for (char c = 'A'; c <= 'Z'; c++) {
@@ -35,14 +36,16 @@ class KeyboardPanel extends JPanel {
         }
     }
     
-    private void createKeys(String[] keys) {
+    private JPanel createRowPanel(String[] keys) {
+        JPanel rowPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 4)); // Use FlowLayout for rows
         for (String key : keys) {
             char letter = key.charAt(0);
             JButton button = new JButton(String.valueOf(letter));
             button.addActionListener(e -> onKey.accept(letter));
             buttons.put(letter, button);
-            add(button);
+            rowPanel.add(button);
         }
+        return rowPanel;
     }
 
     void updateKeyboard(GuessResult result, Difficulty difficulty) {

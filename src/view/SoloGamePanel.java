@@ -13,17 +13,20 @@ import model.Enums.Difficulty;
 import model.Records.GamePlayer;
 import model.Records.GuessResult;
 import model.Records.PlayerProfile;
-import model.GameState; // Missing Import
+import model.GameState;
 
-import java.awt.Color; // Missing Import
-import javax.swing.JOptionPane; // Missing Import
-import javax.swing.ImageIcon; // Missing Import
-import java.net.URL; // Missing Import
-import java.awt.Image; // Missing Import
-import java.awt.image.BufferedImage; // Missing Import
-import java.awt.Graphics2D; // Missing Import
-import java.awt.RenderingHints; // Missing Import
-import model.Enums.GameStatus; // Missing Import
+import java.awt.Color;
+import javax.swing.JOptionPane;
+import javax.swing.ImageIcon;
+// import java.net.URL; // Removed: ResourceLoader handles URL
+// import java.awt.Image; // Removed: no longer needed for manual scaling
+// import java.awt.image.BufferedImage; // Removed: no longer needed for manual scaling
+// import java.awt.Graphics2D; // Removed: no longer needed for manual scaling
+// import java.awt.RenderingHints; // Removed: no longer needed for manual scaling
+import model.Enums.GameStatus;
+import util.Constants;
+import util.ResourceLoader; // Import ResourceLoader
+import util.SoundEffect;
 
 class SoloGamePanel extends JPanel implements TimerController.Listener {
 
@@ -117,12 +120,12 @@ class SoloGamePanel extends JPanel implements TimerController.Listener {
     private void onGameFinished(GameState state) {
         boolean playerWon = (state.getWinner() != null && state.getWinner().equals(player));
         String message;
-        String soundFile;
+        SoundEffect soundEffect;
         String graphicFile; // Placeholder for graphic file path
 
         if (playerWon) {
-            soundFile = "/main/resources/win.wav";
-            graphicFile = "/main/resources/win_graphic.png";
+            soundEffect = SoundEffect.WIN; // Use SoundEffect enum
+            graphicFile = "win.png"; // Use filename directly (corrected to .png)
             
             // "Did you know this word?" prompt
             int choice = JOptionPane.showConfirmDialog(
@@ -140,14 +143,17 @@ class SoloGamePanel extends JPanel implements TimerController.Listener {
                 message = "Congratulations! You won!";
             }
         } else {
-            soundFile = "/main/resources/lose.wav";
-            graphicFile = "/main/resources/lose_graphic.png";
+            soundEffect = SoundEffect.LOSE; // Use SoundEffect enum
+            graphicFile = "lose.png"; // Use filename directly (corrected to .png)
             String targetWord = state.wordFor(player).word(); // Get the word the player was guessing
             message = "Game Over! The word was: " + targetWord + ". You lost!";
         }
         
         // Play sound
-        util.AudioPlayer.playSound(getClass().getResource(soundFile).getPath());
+        ResourceLoader.playSound(soundEffect); // Use ResourceLoader
+        
+        // Handle Optional<ImageIcon>
+        ImageIcon graphicIcon = ResourceLoader.getImageIcon(graphicFile, 100, 100).orElse(null);
 
         // Display graphic (for now, a simple message dialog)
         JOptionPane.showMessageDialog(
@@ -155,22 +161,11 @@ class SoloGamePanel extends JPanel implements TimerController.Listener {
             message,
             playerWon ? "You Win!" : "You Lose!",
             JOptionPane.INFORMATION_MESSAGE,
-            getGraphicIcon(graphicFile)
+            graphicIcon
         );
 
         // Optionally navigate back to setup or landing
         navigation.showGameSetup(); // Or showLanding()
-    }
-
-    // Helper to get a scaled graphic icon
-    private ImageIcon getGraphicIcon(String path) {
-        URL imageUrl = getClass().getResource(path);
-        if (imageUrl != null) {
-            ImageIcon originalIcon = new ImageIcon(imageUrl);
-            Image scaledImage = originalIcon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH); // Scale for dialog
-            return new ImageIcon(scaledImage);
-        }
-        return null; // No graphic
     }
     
     private void handleBackspace() {

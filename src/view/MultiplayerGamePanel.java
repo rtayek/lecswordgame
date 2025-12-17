@@ -25,6 +25,7 @@ import model.GameState.GameConfig; // Missing Import
 import model.Records.WordChoice; // Missing Import
 import model.Enums.FinishState; // Missing Import
 import model.Enums.GameMode; // Missing Import
+import util.Constants; // Add import
 
 class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
 
@@ -311,12 +312,12 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
         GamePlayer playerTwo = state.getConfig().playerTwo();
 
         if (winner == null) { // Tie
-            soundFile = "/main/resources/tie.wav"; // Assuming tie sound
-            graphicFile = "/main/resources/tie_graphic.png"; // Assuming tie graphic
+            soundFile = Constants.RESOURCES_PATH + "tie.wav"; // Assuming tie sound
+            graphicFile = Constants.RESOURCES_PATH + "tie_graphic.png"; // Assuming tie graphic
             message = "It's a Tie! Both players guessed the word.";
         } else if (winner.equals(playerOne) || winner.equals(playerTwo)) { // A player won
-            soundFile = "/main/resources/win.wav";
-            graphicFile = "/main/resources/win_graphic.png";
+            soundFile = Constants.RESOURCES_PATH + "win.wav";
+            graphicFile = Constants.RESOURCES_PATH + "win_graphic.png";
             
             GamePlayer winningPlayer = winner;
             GamePlayer losingPlayer = (winner.equals(playerOne)) ? playerTwo : playerOne;

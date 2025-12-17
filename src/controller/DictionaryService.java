@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import model.Enums.WordLength;
+import util.Constants; // Correctly placed import
 
 /**
  * A service responsible for providing words from a dictionary.
@@ -40,7 +41,7 @@ public class DictionaryService {
 
     private void loadWordBank() {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                getClass().getResourceAsStream("/main/resources/words.txt")))) {
+                getClass().getResourceAsStream(Constants.RESOURCES_PATH + "words.txt")))) {
             Map<WordLength, List<String>> tempMap = reader.lines()
                     .filter(line -> !line.trim().isEmpty() && !line.startsWith("#"))
                     .map(String::trim)

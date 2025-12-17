@@ -4,12 +4,7 @@ import controller.AppController;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
-import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.RenderingHints;
-import java.awt.image.BufferedImage;
 import java.io.File;
-import java.net.URL;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -20,6 +15,8 @@ import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import model.Records.PlayerProfile;
+import util.Constants;
+import util.ResourceLoader; // Import ResourceLoader
 
 class ProfileSetupPanel extends JPanel {
 
@@ -108,15 +105,12 @@ class ProfileSetupPanel extends JPanel {
     }
 
     private void loadDefaultProfilePicture() {
-        // Try to load a default avatar from resources
-        URL defaultImageUrl = getClass().getResource("/main/resources/default_avatar.png");
-        if (defaultImageUrl != null) {
-            ImageIcon defaultIcon = new ImageIcon(defaultImageUrl);
+        ImageIcon defaultIcon = ResourceLoader.getImageIcon("default_avatar.png", 100, 100).orElse(null); // Use ResourceLoader and handle Optional
+        if (defaultIcon != null) {
             setProfilePicture(defaultIcon);
-            // currentAvatarPath = defaultImageUrl.getPath(); // Don't set path for default
         } else {
             profilePictureLabel.setText("No Image");
-            System.err.println("Default avatar image not found at /main/resources/default_avatar.png");
+            // Error message is handled by ResourceLoader
             currentAvatarPath = null;
         }
     }
@@ -135,39 +129,13 @@ class ProfileSetupPanel extends JPanel {
         }
     }
 
-    private void setProfilePicture(ImageIcon originalIcon) {
-        if (originalIcon.getImage() == null) {
+    private void setProfilePicture(ImageIcon icon) { // Changed parameter type
+        if (icon == null || icon.getImage() == null) {
             profilePictureLabel.setText("Invalid Image");
             currentAvatarPath = null;
             return;
         }
-        Image scaledImage = getScaledImage(originalIcon.getImage(), 100, 100);
-        profilePictureLabel.setIcon(new ImageIcon(scaledImage));
+        profilePictureLabel.setIcon(icon);
         profilePictureLabel.setText(""); // Clear text if image is set
     }
-
-    // Helper to scale image while maintaining aspect ratio
-    private Image getScaledImage(Image srcImg, int w, int h){
-        BufferedImage resizedImg = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = resizedImg.createGraphics();
-
-        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g2.drawImage(srcImg, 0, 0, w, h, null);
-        g2.dispose();
-
-        return resizedImg;
-    }
-
-    // getUsername and getAvatarPath are no longer needed as AppController handles saving/loading
-    /*
-    public String getUsername() {
-        return usernameField.getText();
-    }
-
-    public String getAvatarPath() {
-        return currentAvatarPath;
-    }
-    */
-
-    private static final long serialVersionUID = 1L;
 }
