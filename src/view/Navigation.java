@@ -1,6 +1,12 @@
 package view;
 
+import model.GameState;
+
 interface Navigation {
+    GameState getGameState();
+
+    void setGameState(GameState state);
+
     void showLanding();
 
     void showProfileSetup();

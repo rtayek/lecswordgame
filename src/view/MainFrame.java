@@ -5,6 +5,7 @@ import controller.GameController;
 import java.awt.CardLayout;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import model.GameState;
 
 public class MainFrame extends JFrame implements Navigation {
 
@@ -20,9 +21,9 @@ public class MainFrame extends JFrame implements Navigation {
         var friends = new FriendsPanel(this);
         var gameLog = new GameLogPanel(this);
         var hardest = new HardestWordsPanel(this);
-        var setup = new GameSetupPanel(this,gameController);
+        var setup = new GameSetupPanel(this, gameController);
         multiplayer = new MultiplayerGamePanel(this, gameController);
-        var solo = new SoloGamePanel(this, gameController);
+        solo = new SoloGamePanel(this, gameController);
 
         cards.add(landing, cardLanding);
         cards.add(profile, cardProfile);
@@ -36,6 +37,16 @@ public class MainFrame extends JFrame implements Navigation {
 
         add(cards);
         showLanding();
+    }
+
+    @Override
+    public GameState getGameState() {
+        return this.currentGameState;
+    }
+
+    @Override
+    public void setGameState(GameState state) {
+        this.currentGameState = state;
     }
 
     @Override
@@ -81,6 +92,7 @@ public class MainFrame extends JFrame implements Navigation {
 
     @Override
     public void showSoloGame() {
+        solo.onShow();
         layout.show(cards, cardSolo);
     }
 
@@ -99,4 +111,6 @@ public class MainFrame extends JFrame implements Navigation {
     private final CardLayout layout = new CardLayout();
     private final JPanel cards = new JPanel(layout);
     private final MultiplayerGamePanel multiplayer;
+    private final SoloGamePanel solo;
+    private GameState currentGameState;
 }

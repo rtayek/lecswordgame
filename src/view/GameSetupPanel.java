@@ -7,9 +7,11 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import model.Enums.Difficulty;
+import model.Enums.GameMode;
 import model.Enums.TimerDuration;
 import model.Enums.WordLength;
 import model.Enums.WordSource;
+import model.GameState.GameConfig;
 import model.Records.GamePlayer;
 import model.Records.PlayerProfile;
 import model.Records.WordChoice;
@@ -17,6 +19,8 @@ import model.Records.WordChoice;
 class GameSetupPanel extends JPanel {
 
     GameSetupPanel(Navigation navigation, GameController gameController) {
+        this.navigation = navigation;
+        this.gameController = gameController;
         setLayout(new BorderLayout(8, 8));
         add(new JLabel("Game Setup"), BorderLayout.NORTH);
 
@@ -30,30 +34,39 @@ class GameSetupPanel extends JPanel {
             var difficulty = Difficulty.normal;
             var wordLength = WordLength.five;
             var timerDuration = TimerDuration.none;
-            var wordOne = gameController.pickWord(wordLength);
-            var wordTwo = gameController.pickWord(wordLength);
-            // Avoid identical words when possible.
-            if (wordTwo.equals(wordOne)) {
-                wordTwo = gameController.pickWord(wordLength);
+            
+            var config = new GameConfig(GameMode.multiplayer, difficulty, wordLength, timerDuration, playerOne, playerTwo);
+
+            var wordOneStr = gameController.pickWord(wordLength);
+            var wordTwoStr = gameController.pickWord(wordLength);
+            if (wordTwoStr.equals(wordOneStr)) {
+                wordTwoStr = gameController.pickWord(wordLength);
             }
+            var wordOne = new WordChoice(wordOneStr, WordSource.rollTheDice);
+            var wordTwo = new WordChoice(wordTwoStr, WordSource.rollTheDice);
 
-            gameController.startNewMultiplayerGame(
-                    playerOne,
-                    playerTwo,
-                    difficulty,
-                    wordLength,
-                    timerDuration
-            );
+            var state = gameController.startNewGame(config, wordOne, wordTwo);
 
-            var state = gameController.getGameState();
-            state.setPlayerOneWord(new WordChoice(wordOne, WordSource.rollTheDice));
-            state.setPlayerTwoWord(new WordChoice(wordTwo, WordSource.rollTheDice));
-
+            navigation.setGameState(state);
             navigation.showMultiplayerGame();
         });
 
         var solo = new JButton("Start Solo");
-        solo.addActionListener(e -> navigation.showSoloGame());
+        solo.addActionListener(e -> {
+            var player = new GamePlayer(new PlayerProfile("You", ""), true);
+            var difficulty = Difficulty.normal;
+            var wordLength = WordLength.five;
+            var timer = TimerDuration.none;
+
+            var config = new GameConfig(GameMode.solo, difficulty, wordLength, timer, player, null);
+            var targetWord = gameController.pickWord(wordLength);
+            var wordChoice = new WordChoice(targetWord, WordSource.rollTheDice);
+
+            var state = gameController.startNewGame(config, null, wordChoice);
+            
+            navigation.setGameState(state);
+            navigation.showSoloGame();
+        });
 
         options.add(multiplayer);
         options.add(solo);
@@ -63,6 +76,8 @@ class GameSetupPanel extends JPanel {
         back.addActionListener(e -> navigation.showLanding());
         add(back, BorderLayout.SOUTH);
     }
-
+    
+    private final Navigation navigation;
+    private final GameController gameController;
     static final long serialVersionUID = 1L;
 }

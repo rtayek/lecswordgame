@@ -8,21 +8,26 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import model.Enums.Difficulty;
+import model.Enums.GameMode;
 import model.Enums.TimerDuration;
 import model.Enums.WordLength;
+import model.Enums.WordSource;
+import model.GameState.GameConfig;
 import model.Records.GamePlayer;
 import model.Records.GuessResult;
 import model.Records.PlayerProfile;
+import model.Records.WordChoice;
 
 class SoloGamePanel extends JPanel {
 
     SoloGamePanel(Navigation navigation, GameController gameController) {
+        this.navigation = navigation;
         this.gameController = gameController;
         this.player = new GamePlayer(new PlayerProfile("You", ""), true);
 
         setLayout(new BorderLayout(8, 8));
         add(new JLabel("Solo Game"), BorderLayout.NORTH);
-
+        
         grid = new GuessGridPanel();
         add(new JScrollPane(grid), BorderLayout.CENTER);
 
@@ -43,63 +48,58 @@ class SoloGamePanel extends JPanel {
         var backspace = new JButton("Backspace");
         backspace.addActionListener(e -> handleBackspace());
 
-        var newGame = new JButton("New Word");
-        newGame.addActionListener(e -> startNewGame());
-
-        var back = new JButton("Back");
-        back.addActionListener(e -> navigation.showLanding());
+        var back = new JButton("Back to Setup");
+        back.addActionListener(e -> navigation.showGameSetup());
 
         controls.add(submit);
         controls.add(backspace);
-        controls.add(newGame);
         controls.add(back);
         add(controls, BorderLayout.WEST);
-
-        startNewGame();
     }
 
+    public void onShow() {
+        grid.clearRows();
+        guessField.setText("");
+        setStatus("New game started. Make your guess!");
+    }
+    
     private void handleGuess() {
         var rawGuess = guessField.getText();
+        var gameState = navigation.getGameState();
+        if (gameState == null) {
+            setStatus("Please start a new game from the setup screen.");
+            return;
+        }
 
         try {
-            GuessResult result = gameController.submitGuess(player, rawGuess);
-            grid.addGuessRow(new GuessRowPanel(result.guess(), result.feedback()));
-            guessField.setText("");
+            var newGameState = gameController.submitGuess(gameState, player, rawGuess);
+            navigation.setGameState(newGameState);
 
-            if (result.exactMatch()) {
-                setStatus("You solved it!");
-            } else {
-                // This status message could be improved, but we'll leave it for now.
-                setStatus(result.correctLetterCount() + " letters are correct.");
+            // We need to get the latest guess from the state
+            var guesses = newGameState.getGuesses();
+            if (!guesses.isEmpty()) {
+                GuessResult result = guesses.get(guesses.size() - 1).result();
+                grid.addGuessRow(new GuessRowPanel(result.guess(), result.feedback()));
+                guessField.setText("");
+
+                if (result.exactMatch()) {
+                    setStatus("You solved it!");
+                } else {
+                    setStatus(result.correctLetterCount() + " letters are correct.");
+                }
             }
         } catch (IllegalStateException | IllegalArgumentException ex) {
-            // Exceptions from the controller are now used to display status messages.
             setStatus(ex.getMessage());
         }
     }
-
+    
     private void handleBackspace() {
         var text = guessField.getText();
         if (text != null && !text.isEmpty()) {
             guessField.setText(text.substring(0, text.length() - 1));
         }
     }
-
-    private void startNewGame() {
-        grid.clearRows();
-        guessField.setText("");
-        setStatus(" ");
-        var length = WordLength.five;
-        var target = gameController.pickWord(length);
-        gameController.startNewSoloGame(
-                player,
-                Difficulty.normal,
-                length,
-                TimerDuration.none,
-                target
-        );
-    }
-
+    
     private void setStatus(String text) {
         statusLabel.setText(text);
     }
@@ -110,6 +110,7 @@ class SoloGamePanel extends JPanel {
 
     private static final long serialVersionUID = 1L;
 
+    private final Navigation navigation;
     private final GameController gameController;
     private final GamePlayer player;
     private final GuessGridPanel grid;

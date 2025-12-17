@@ -4,41 +4,35 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import model.Enums.*;
+import model.Enums.Difficulty;
+import model.Enums.FinishState;
+import model.Enums.GameMode;
+import model.Enums.GameStatus;
+import model.Enums.TimerDuration;
+import model.Enums.WordLength;
 import model.Records.GamePlayer;
 import model.Records.GuessEntry;
 import model.Records.WordChoice;
 
+/**
+ * Represents the live, mutable state of a game in progress.
+ * It holds a reference to the immutable GameConfig and manages data that changes on each turn.
+ */
 public class GameState {
+	public static record GameConfig(
+		    GameMode mode,
+		    Difficulty difficulty,
+		    WordLength wordLength,
+		    TimerDuration timerDuration,
+		    GamePlayer playerOne,
+		    GamePlayer playerTwo
+		) {}
 
-    public GameState(GameMode mode,
-                     Difficulty difficulty,
-                     WordLength wordLength,
-                     TimerDuration timerDuration,
-                     GamePlayer playerOne,
-                     GamePlayer playerTwo) {
-        this(UUID.randomUUID().toString(), mode, difficulty, wordLength, timerDuration, playerOne, playerTwo,
-                GameStatus.setup, playerOne);
-    }
-
-    public GameState(String id,
-                     GameMode mode,
-                     Difficulty difficulty,
-                     WordLength wordLength,
-                     TimerDuration timerDuration,
-                     GamePlayer playerOne,
-                     GamePlayer playerTwo,
-                     GameStatus status,
-                     GamePlayer startingTurn) {
-        this.id = Objects.requireNonNullElseGet(id, () -> UUID.randomUUID().toString());
-        this.mode = mode;
-        this.difficulty = difficulty;
-        this.wordLength = wordLength;
-        this.timerDuration = timerDuration;
-        this.playerOne = playerOne;
-        this.playerTwo = playerTwo;
-        this.status = status;
-        this.currentTurn = startingTurn;
+    public GameState(GameConfig config) {
+        this.id = UUID.randomUUID().toString();
+        this.config = config;
+        this.status = GameStatus.setup;
+        this.currentTurn = config.playerOne(); // Default to player one starting
         this.guesses = new ArrayList<>();
     }
 
@@ -46,29 +40,37 @@ public class GameState {
         return id;
     }
 
-    public GameMode getMode() {
-        return mode;
+    public GameConfig getConfig() {
+        return config;
     }
 
-    public Difficulty getDifficulty() {
-        return difficulty;
+    // --- Delegated Getters for Configuration ---
+
+    public Enums.GameMode getMode() {
+        return config.mode();
     }
 
-    public WordLength getWordLength() {
-        return wordLength;
+    public Enums.Difficulty getDifficulty() {
+        return config.difficulty();
     }
 
-    public TimerDuration getTimerDuration() {
-        return timerDuration;
+    public Enums.WordLength getWordLength() {
+        return config.wordLength();
+    }
+
+    public Enums.TimerDuration getTimerDuration() {
+        return config.timerDuration();
     }
 
     public GamePlayer getPlayerOne() {
-        return playerOne;
+        return config.playerOne();
     }
 
     public GamePlayer getPlayerTwo() {
-        return playerTwo;
+        return config.playerTwo();
     }
+
+    // --- Live State Management ---
 
     public WordChoice getPlayerOneWord() {
         return playerOneWord;
@@ -103,8 +105,8 @@ public class GameState {
     }
 
     public void switchTurn() {
-        if (playerOne != null && playerTwo != null) {
-            currentTurn = Objects.equals(currentTurn, playerOne) ? playerTwo : playerOne;
+        if (config.playerOne() != null && config.playerTwo() != null) {
+            currentTurn = Objects.equals(currentTurn, config.playerOne()) ? config.playerTwo() : config.playerOne();
         }
     }
 
@@ -124,19 +126,18 @@ public class GameState {
         if (player == null) {
             return null;
         }
-        var isPlayerOne = Objects.equals(player, playerOne);
-        // Corrected logic: player one guesses player two's word.
+        var isPlayerOne = Objects.equals(player, config.playerOne());
         return isPlayerOne ? playerTwoWord : playerOneWord;
     }
 
     public GamePlayer getOpponent(GamePlayer player) {
         if (player == null) return null;
-        return Objects.equals(player, playerOne) ? playerTwo : playerOne;
+        return Objects.equals(player, config.playerOne()) ? config.playerTwo() : config.playerOne();
     }
 
     public void setPlayerFinishState(GamePlayer player, FinishState state) {
         if (player == null) return;
-        if (Objects.equals(player, playerOne)) {
+        if (Objects.equals(player, config.playerOne())) {
             this.playerOneFinishState = state;
         } else {
             this.playerTwoFinishState = state;
@@ -145,16 +146,12 @@ public class GameState {
 
     public FinishState getPlayerFinishState(GamePlayer player) {
         if (player == null) return FinishState.NOT_FINISHED;
-        return Objects.equals(player, playerOne) ? playerOneFinishState : playerTwoFinishState;
+        return Objects.equals(player, config.playerOne()) ? playerOneFinishState : playerTwoFinishState;
     }
 
     final String id;
-    final GameMode mode;
-    final Difficulty difficulty;
-    final WordLength wordLength;
-    final TimerDuration timerDuration;
-    final GamePlayer playerOne;
-    final GamePlayer playerTwo;
+    final GameConfig config;
+
     WordChoice playerOneWord;
     WordChoice playerTwoWord;
     GameStatus status;
