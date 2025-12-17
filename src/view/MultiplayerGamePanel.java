@@ -10,6 +10,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import model.Records.GamePlayer;
 import model.Enums.*;
+import model.GameState;
 
 class MultiplayerGamePanel extends JPanel {
 
@@ -76,63 +77,38 @@ class MultiplayerGamePanel extends JPanel {
     }
 
     private void handleGuess() {
-        var gameState = navigation.getGameState();
-        if (gameState == null) {
-            setStatus("No active game. Start a multiplayer game first.");
+        GuessUIHelper.Outcome outcome = GuessUIHelper.submitGuess(
+                navigation,
+                gameController,
+                gs -> gs.getCurrentTurn(),
+                guessField.getText(),
+                "No active game. Start a multiplayer game first."
+        );
+
+        if (outcome.isError()) {
+            setStatus(outcome.errorMessage());
             submitButton.setEnabled(false);
             return;
         }
 
-        var wordLength = gameState.getWordLength();
-        if (wordLength == null) {
-            setStatus("Word length is not set for this game.");
-            submitButton.setEnabled(false);
-            return;
+        var state = outcome.state();
+        var result = outcome.result();
+        var difficulty = state.getConfig().difficulty();
+
+        if (outcome.player() == state.getConfig().playerOne()) {
+            leftGrid.addGuessRow(new GuessRowPanel(result, difficulty));
+        } else {
+            rightGrid.addGuessRow(new GuessRowPanel(result, difficulty));
         }
 
-        if (gameState.getStatus() == GameStatus.finished) {
-            setStatus("Game finished.");
-            submitButton.setEnabled(false);
-            return;
-        }
+        guessField.setText("");
+        setStatus(" ");
 
-        GamePlayer current = gameState.getCurrentTurn();
-        if (current == null) {
-            setStatus("No current player.");
-            submitButton.setEnabled(false);
-            return;
-        }
+        updateCurrentPlayerLabel();
 
-        var raw = guessField.getText();
-        
-        try {
-            var newGameState = gameController.submitGuess(gameState, current, raw);
-            navigation.setGameState(newGameState);
-            
-            var guesses = newGameState.getGuesses();
-            if (!guesses.isEmpty()) {
-                var result = guesses.get(guesses.size() - 1).result();
-                var difficulty = newGameState.getDifficulty();
-                if (current == newGameState.getPlayerOne()) {
-                    leftGrid.addGuessRow(new GuessRowPanel(result, difficulty));
-                } else {
-                    rightGrid.addGuessRow(new GuessRowPanel(result, difficulty));
-                }
-            }
-
-
-            guessField.setText("");
-            setStatus(" ");
-
-            updateCurrentPlayerLabel();
-
-            var finished = newGameState.getStatus() == GameStatus.finished;
-            submitButton.setEnabled(!finished);
-            guessField.setEnabled(!finished);
-
-        } catch (RuntimeException ex) {
-            setStatus("Error: " + ex.getMessage());
-        }
+        var finished = state.getStatus() == GameStatus.finished;
+        submitButton.setEnabled(!finished);
+        guessField.setEnabled(!finished);
     }
 
     private void handleBackspace() {
@@ -161,7 +137,7 @@ class MultiplayerGamePanel extends JPanel {
             } else {
                 var name = winner.profile() != null ? winner.profile().username() : null;
                 if (name == null || name.isBlank()) {
-                    name = winner == state.getPlayerOne() ? "Player 1" : "Player 2";
+                    name = winner == state.getConfig().playerOne() ? "Player 1" : "Player 2";
                 }
                 currentPlayerLabel.setText(name + " wins!");
             }
@@ -179,7 +155,7 @@ class MultiplayerGamePanel extends JPanel {
 
         var name = player.profile().username();
         if (name == null || name.isBlank()) {
-            name = player == state.getPlayerOne() ? "Player 1" : "Player 2";
+            name = player == state.getConfig().playerOne() ? "Player 1" : "Player 2";
         }
 
         currentPlayerLabel.setText("Current player: " + name);
@@ -193,8 +169,8 @@ class MultiplayerGamePanel extends JPanel {
         setStatus(" ");
 
         if (state != null) {
-            var p1 = state.getPlayerOne();
-            var p2 = state.getPlayerTwo();
+            var p1 = state.getConfig().playerOne();
+            var p2 = state.getConfig().playerTwo();
 
             var name1 = p1 != null && p1.profile() != null ? p1.profile().username() : null;
             var name2 = p2 != null && p2.profile() != null ? p2.profile().username() : null;

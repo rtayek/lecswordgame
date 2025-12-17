@@ -8,15 +8,9 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import model.Enums.Difficulty;
-import model.Enums.GameMode;
-import model.Enums.TimerDuration;
-import model.Enums.WordLength;
-import model.Enums.WordSource;
-import model.GameState.GameConfig;
 import model.Records.GamePlayer;
 import model.Records.GuessResult;
 import model.Records.PlayerProfile;
-import model.Records.WordChoice;
 
 class SoloGamePanel extends JPanel {
 
@@ -64,37 +58,30 @@ class SoloGamePanel extends JPanel {
     }
     
     private void handleGuess() {
-        var rawGuess = guessField.getText();
-        var gameState = navigation.getGameState();
-        if (gameState == null) {
-            setStatus("Please start a new game from the setup screen.");
+        GuessUIHelper.Outcome outcome = GuessUIHelper.submitGuess(
+                navigation,
+                gameController,
+                gs -> player,
+                guessField.getText(),
+                "Please start a new game from the setup screen."
+        );
+
+        if (outcome.isError()) {
+            setStatus(outcome.errorMessage());
             return;
         }
 
-        try {
-            var newGameState = gameController.submitGuess(gameState, player, rawGuess);
-            navigation.setGameState(newGameState);
+        var result = outcome.result();
+        var difficulty = outcome.state().getConfig().difficulty();
+        grid.addGuessRow(new GuessRowPanel(result, difficulty));
+        guessField.setText("");
 
-            // We need to get the latest guess from the state
-            var guesses = newGameState.getGuesses();
-            if (!guesses.isEmpty()) {
-                GuessResult result = guesses.get(guesses.size() - 1).result();
-                var difficulty = newGameState.getDifficulty();
-                grid.addGuessRow(new GuessRowPanel(result, difficulty));
-                guessField.setText("");
-
-                if (result.exactMatch()) {
-                    setStatus("You solved it!");
-                } else {
-                    if (difficulty == Difficulty.expert) {
-                        setStatus("Correct letters: " + result.correctLetterCount());
-                    } else {
-                        setStatus(result.correctLetterCount() + " letters are correct.");
-                    }
-                }
-            }
-        } catch (IllegalStateException | IllegalArgumentException ex) {
-            setStatus(ex.getMessage());
+        if (result.exactMatch()) {
+            setStatus("You solved it!");
+        } else if (difficulty == Difficulty.expert) {
+            setStatus("Correct letters: " + result.correctLetterCount());
+        } else {
+            setStatus(result.correctLetterCount() + " letters are correct.");
         }
     }
     

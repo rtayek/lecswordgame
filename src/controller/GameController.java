@@ -3,7 +3,6 @@ package controller;
 import java.util.ArrayList;
 import java.util.List;
 import model.Enums.Difficulty;
-import model.Enums.GameMode;
 import model.Enums.LetterFeedback;
 import model.Enums.GameStatus;
 import model.GameState;
@@ -47,7 +46,7 @@ public class GameController {
         // --- Input validation and processing ---
         var upper = rawGuess == null ? "" : rawGuess.trim().toUpperCase();
         var guess = upper.replaceAll("[^A-Z]", "");
-        int expectedLength = gameState.getWordLength().length();
+        int expectedLength = gameState.getConfig().wordLength().length();
 
         if (guess.isEmpty()) {
             throw new IllegalArgumentException("Enter a guess first.");
@@ -64,7 +63,7 @@ public class GameController {
 
         // --- Evaluate the guess ---
         GuessResult result;
-        Difficulty difficulty = gameState.getDifficulty();
+        Difficulty difficulty = gameState.getConfig().difficulty();
         switch (difficulty) {
             case normal -> result = evaluateNormal(guess, target);
             case hard -> result = evaluateHard(guess, target);

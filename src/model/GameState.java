@@ -49,31 +49,6 @@ public class GameState {
         return config;
     }
 
-    // --- Delegated Getters for Configuration ---
-
-    public Enums.GameMode getMode() {
-        return config.mode();
-    }
-
-    public Enums.Difficulty getDifficulty() {
-        return config.difficulty();
-    }
-
-    public Enums.WordLength getWordLength() {
-        return config.wordLength();
-    }
-
-    public Enums.TimerDuration getTimerDuration() {
-        return config.timerDuration();
-    }
-
-    public GamePlayer getPlayerOne() {
-        return config.playerOne();
-    }
-
-    public GamePlayer getPlayerTwo() {
-        return config.playerTwo();
-    }
 
     // --- Live State Management ---
 
@@ -161,7 +136,7 @@ public class GameState {
             return;
         }
 
-        if (getMode() == GameMode.solo) {
+        if (config.mode() == GameMode.solo) {
             if (result.exactMatch()) {
                 setWinner(player);
                 setStatus(GameStatus.finished);
