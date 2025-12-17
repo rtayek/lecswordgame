@@ -49,4 +49,6 @@ public final class Records {
     }
 
     public static record GuessEntry(GamePlayer player, GuessResult result, long timestampMillis) { }
+
+    public static record HardWordEntry(int rank, String word, double hardnessScore) { }
 }

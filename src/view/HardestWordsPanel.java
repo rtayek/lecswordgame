@@ -1,25 +1,59 @@
 package view;
 
 import java.awt.BorderLayout;
+import java.util.List;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
+import model.Records.HardWordEntry; // Import the shared record
+import util.PersistenceService;
 
 class HardestWordsPanel extends JPanel {
 
-    HardestWordsPanel(Navigation navigation) {
-        setLayout(new BorderLayout(8, 8));
-        add(new JLabel("Hardest Words"), BorderLayout.NORTH);
+    private final PersistenceService persistenceService; // Add PersistenceService
+    private DefaultTableModel tableModel;
+    private JTable hardestWordsTable;
 
-        var text = new JTextArea("List of toughest words will be here.");
-        text.setEditable(false);
-        add(new JScrollPane(text), BorderLayout.CENTER);
+    HardestWordsPanel(Navigation navigation, PersistenceService persistenceService) { // Update constructor
+        this.persistenceService = persistenceService; // Initialize PersistenceService
+
+        setLayout(new BorderLayout(8, 8));
+        
+        JLabel titleLabel = new JLabel("Hardest Words");
+        titleLabel.setHorizontalAlignment(JLabel.CENTER);
+        add(titleLabel, BorderLayout.NORTH);
+
+        // Table setup
+        String[] columnNames = {"Rank", "Word", "Hardness Score"};
+        tableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // Make all cells non-editable
+            }
+        };
+        hardestWordsTable = new JTable(tableModel);
+        hardestWordsTable.setFillsViewportHeight(true); // Table fills the height of the scroll pane
+        add(new JScrollPane(hardestWordsTable), BorderLayout.CENTER);
 
         var back = new JButton("Back");
         back.addActionListener(e -> navigation.showLanding());
         add(back, BorderLayout.SOUTH);
+    }
+
+    public void onShow() {
+        tableModel.setRowCount(0); // Clear existing data
+        List<HardWordEntry> hardWords = persistenceService.loadHardestWords();
+
+        for (HardWordEntry entry : hardWords) {
+            tableModel.addRow(new Object[]{
+                entry.rank(),
+                entry.word(),
+                entry.hardnessScore()
+            });
+        }
     }
 
     private static final long serialVersionUID = 1L;

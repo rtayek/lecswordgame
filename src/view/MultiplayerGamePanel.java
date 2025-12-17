@@ -1,6 +1,7 @@
 package view;
 
 import controller.GameController;
+import controller.TimerController;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import javax.swing.JButton;
@@ -12,11 +13,25 @@ import model.Records.GamePlayer;
 import model.Enums.*;
 import model.GameState;
 
-class MultiplayerGamePanel extends JPanel {
+import java.awt.Color; // Missing Import
+import javax.swing.JOptionPane; // Missing Import
+import javax.swing.ImageIcon; // Missing Import
+import java.net.URL; // Missing Import
+import java.awt.Image; // Missing Import
+import java.awt.image.BufferedImage; // Missing Import
+import java.awt.Graphics2D; // Missing Import
+import java.awt.RenderingHints; // Missing Import
+import model.GameState.GameConfig; // Missing Import
+import model.Records.WordChoice; // Missing Import
+import model.Enums.FinishState; // Missing Import
+import model.Enums.GameMode; // Missing Import
+
+class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
 
     MultiplayerGamePanel(Navigation navigation, GameController gameController) {
         this.navigation = navigation;
         this.gameController = gameController;
+        navigation.getTimerController().setListener(this);
 
         setLayout(new BorderLayout(8, 8));
 
@@ -30,12 +45,20 @@ class MultiplayerGamePanel extends JPanel {
 
         var leftPanel = new JPanel(new BorderLayout());
         playerOneLabel = new JLabel("Player 1");
-        leftPanel.add(playerOneLabel, BorderLayout.NORTH);
+        playerOneTimerLabel = new JLabel("00:00");
+        var leftHeader = new JPanel(new BorderLayout());
+        leftHeader.add(playerOneLabel, BorderLayout.WEST);
+        leftHeader.add(playerOneTimerLabel, BorderLayout.EAST);
+        leftPanel.add(leftHeader, BorderLayout.NORTH);
         leftPanel.add(new JScrollPane(leftGrid), BorderLayout.CENTER);
 
         var rightPanel = new JPanel(new BorderLayout());
         playerTwoLabel = new JLabel("Player 2");
-        rightPanel.add(playerTwoLabel, BorderLayout.NORTH);
+        playerTwoTimerLabel = new JLabel("00:00");
+        var rightHeader = new JPanel(new BorderLayout());
+        rightHeader.add(playerTwoLabel, BorderLayout.WEST);
+        rightHeader.add(playerTwoTimerLabel, BorderLayout.EAST);
+        rightPanel.add(rightHeader, BorderLayout.NORTH);
         rightPanel.add(new JScrollPane(rightGrid), BorderLayout.CENTER);
 
         gridContainer.add(leftPanel);
@@ -109,6 +132,10 @@ class MultiplayerGamePanel extends JPanel {
         var finished = state.getStatus() == GameStatus.finished;
         submitButton.setEnabled(!finished);
         guessField.setEnabled(!finished);
+        
+        if (state.getStatus() == GameStatus.finished || state.getStatus() == GameStatus.waitingForFinalGuess) {
+            onGameEnd(state);
+        }
     }
 
     private void handleBackspace() {
@@ -144,7 +171,6 @@ class MultiplayerGamePanel extends JPanel {
             submitButton.setEnabled(false);
             return;
         }
-
 
         var player = state.getCurrentTurn();
         if (player == null || player.profile() == null) {
@@ -184,12 +210,60 @@ class MultiplayerGamePanel extends JPanel {
 
             playerOneLabel.setText(name1);
             playerTwoLabel.setText(name2);
+
+            int p1Time = navigation.getTimerController().getRemainingFor(p1);
+            int p2Time = navigation.getTimerController().getRemainingFor(p2);
+            updateTimerLabel(playerOneTimerLabel, p1Time);
+            updateTimerLabel(playerTwoTimerLabel, p2Time);
+
         } else {
             playerOneLabel.setText("Player 1");
             playerTwoLabel.setText("Player 2");
+            updateTimerLabel(playerOneTimerLabel, 0);
+            updateTimerLabel(playerTwoTimerLabel, 0);
         }
 
         updateCurrentPlayerLabel();
+    }
+
+    @Override
+    public void onTimeUpdated(GamePlayer player, int remainingSeconds) {
+        var state = navigation.getGameState();
+        if (state == null) return;
+        
+        JLabel labelToUpdate = (player == state.getConfig().playerOne()) ? playerOneTimerLabel : playerTwoTimerLabel;
+        updateTimerLabel(labelToUpdate, remainingSeconds);
+    }
+
+    @Override
+    public void onTimeExpired(GamePlayer player) {
+        var state = navigation.getGameState();
+        if (state == null) return;
+
+        String name = player.profile().username();
+        if (name == null || name.isBlank()) {
+            name = player == state.getConfig().playerOne() ? "Player 1" : "Player 2";
+        }
+        setStatus(name + " ran out of time!");
+    }
+
+    private void updateTimerLabel(JLabel label, int totalSeconds) {
+        int minutes = totalSeconds / 60;
+        int seconds = totalSeconds % 60;
+        label.setText(String.format("%02d:%02d", minutes, seconds));
+
+        // Determine if timer should be red
+        boolean isTimerRed = false;
+        var gameState = navigation.getGameState();
+        if (gameState != null && gameState.getConfig().timerDuration().isTimed()) {
+            int gameDuration = gameState.getConfig().timerDuration().seconds();
+            if (gameDuration >= 3 * 60 && totalSeconds < 60) { // 3-5 minute games, under 1 minute
+                isTimerRed = true;
+            } else if (gameDuration == 1 * 60 && totalSeconds < 30) { // 1 minute game, under 30 seconds
+                isTimerRed = true;
+            }
+        }
+        label.setForeground(isTimerRed ? Color.RED : Color.BLACK);
     }
 
     private final Navigation navigation;
@@ -203,6 +277,139 @@ class MultiplayerGamePanel extends JPanel {
     private final JLabel playerTwoLabel;
     private final JLabel statusLabel;
     private final JButton submitButton;
+    private final JLabel playerOneTimerLabel;
+    private final JLabel playerTwoTimerLabel;
+
+    private void onGameEnd(GameState state) {
+        if (state.getStatus() == GameStatus.waitingForFinalGuess) {
+            GamePlayer lastGuesser = state.getOpponent(state.getCurrentTurn()); // The one who just guessed correctly
+            GamePlayer opponent = state.getCurrentTurn(); // The one who gets last chance
+
+            JOptionPane.showMessageDialog(
+                this,
+                "%s guessed the word! %s, you get one last chance to guess %s's word.".formatted(
+                    lastGuesser.profile().username(),
+                    opponent.profile().username(),
+                    lastGuesser.profile().username() // Whose word the opponent needs to guess
+                ),
+                "Last Chance!",
+                JOptionPane.INFORMATION_MESSAGE
+            );
+            submitButton.setEnabled(true);
+            guessField.setEnabled(true);
+            // The turn has already been switched by GameState.applyGuessResult
+            updateCurrentPlayerLabel();
+            return;
+        }
+
+        // GameStatus is finished
+        String message;
+        String soundFile;
+        String graphicFile;
+        GamePlayer winner = state.getWinner();
+        GamePlayer playerOne = state.getConfig().playerOne();
+        GamePlayer playerTwo = state.getConfig().playerTwo();
+
+        if (winner == null) { // Tie
+            soundFile = "/main/resources/tie.wav"; // Assuming tie sound
+            graphicFile = "/main/resources/tie_graphic.png"; // Assuming tie graphic
+            message = "It's a Tie! Both players guessed the word.";
+        } else if (winner.equals(playerOne) || winner.equals(playerTwo)) { // A player won
+            soundFile = "/main/resources/win.wav";
+            graphicFile = "/main/resources/win_graphic.png";
+            
+            GamePlayer winningPlayer = winner;
+            GamePlayer losingPlayer = (winner.equals(playerOne)) ? playerTwo : playerOne;
+            
+            // "Did you know this word?" prompt for the winner
+            int choice = JOptionPane.showConfirmDialog(
+                this,
+                "%s, you guessed the word! Did you know this word?".formatted(winningPlayer.profile().username()),
+                "Win Condition",
+                JOptionPane.YES_NO_OPTION
+            );
+
+            if (choice == JOptionPane.NO_OPTION) {
+                // If winner didn't know, they win automatically
+                message = "Congratulations, %s! You won because you didn't know the word!".formatted(winningPlayer.profile().username());
+            } else {
+                // If winner knew, and opponent also guessed their word, it's a tie
+                if (state.getPlayerFinishState(losingPlayer) == FinishState.FINISHED_SUCCESS) {
+                    soundFile = "/main/resources/tie.wav";
+                    graphicFile = "/main/resources/tie_graphic.png";
+                    winner = null; // Mark as tie
+                    message = "It's a Tie! Both of you knew your words.";
+                } else {
+                    message = "Congratulations, %s! You won!".formatted(winningPlayer.profile().username());
+                }
+            }
+        } else { // Someone lost, and didn't guess their word on last chance
+            soundFile = "/main/resources/lose.wav";
+            graphicFile = "/main/resources/lose_graphic.png";
+            GamePlayer loser = state.getOpponent(winner); // The one who failed the last guess
+            String targetWord = state.wordFor(loser).word();
+            message = "Game Over for %s! The word was: %s. %s wins!".formatted(
+                loser.profile().username(),
+                targetWord,
+                winner.profile().username()
+            );
+
+            // Offer to shift into solo-mode
+            int soloChoice = JOptionPane.showConfirmDialog(
+                this,
+                "%s, you failed to guess the word. Would you like to continue guessing in solo mode?".formatted(loser.profile().username()),
+                "Continue in Solo Mode?",
+                JOptionPane.YES_NO_OPTION
+            );
+
+            if (soloChoice == JOptionPane.YES_OPTION) {
+                // Create new solo game state for the loser to continue guessing the opponent's word
+                GameConfig soloConfig = new GameConfig(
+                    GameMode.solo,
+                    state.getConfig().difficulty(),
+                    state.getConfig().wordLength(),   // Correct position for WordLength
+                    state.getConfig().timerDuration(), // Correct position for TimerDuration
+                    loser,                            // Correct position for playerOne
+                    state.getOpponent(loser)          // Correct position for playerTwo
+                );
+                // The word to guess is the one the loser failed to guess
+                WordChoice wordToGuess = state.wordFor(loser);
+                
+                // This will need to be properly managed by navigation to create a new SoloGamePanel
+                // For now, a placeholder to show the intent
+                // navigation.showSoloGameWithConfig(soloConfig, wordToGuess); // This method would need to be added to Navigation
+                JOptionPane.showMessageDialog(this, "Transitioning to solo mode (feature to be implemented fully).");
+                navigation.showLanding(); // For now, go to landing
+                return;
+            }
+        }
+        
+        // Play sound
+        util.AudioPlayer.playSound(getClass().getResource(soundFile).getPath());
+
+        // Display graphic
+        JOptionPane.showMessageDialog(
+            this,
+            message,
+            (winner != null) ? (winner.profile().username() + " Wins!") : "Game Result",
+            JOptionPane.INFORMATION_MESSAGE,
+            getGraphicIcon(graphicFile)
+        );
+
+        // Optionally navigate back to setup or landing
+        navigation.showGameSetup(); // Or showLanding()
+    }
+
+    // Helper to get a scaled graphic icon
+    private ImageIcon getGraphicIcon(String path) {
+        URL imageUrl = getClass().getResource(path);
+        if (imageUrl != null) {
+            ImageIcon originalIcon = new ImageIcon(imageUrl);
+            Image scaledImage = originalIcon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH); // Scale for dialog
+            return new ImageIcon(scaledImage);
+        }
+        return null; // No graphic
+    }
 
     private static final long serialVersionUID = 1L;
 }

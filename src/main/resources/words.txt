@@ -1,0 +1,33 @@
+# 3-letter words
+CAT
+SUN
+MAP
+DOG
+RUN
+TOP
+
+# 4-letter words
+TREE
+LION
+BOAT
+FISH
+BIRD
+PLAY
+
+# 5-letter words
+APPLE
+GRAPE
+PLANE
+BREAD
+HOUSE
+DREAM
+
+# 6-letter words
+ORANGE
+PLANET
+STREAM
+FLOWER
+GARDEN
+PYTHON
+TIGER
+WINDOW

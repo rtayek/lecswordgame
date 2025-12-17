@@ -1,7 +1,11 @@
 package view;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.Image;
+import java.net.URL;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -10,7 +14,21 @@ class LandingPanel extends JPanel {
 
     LandingPanel(Navigation navigation) {
         setLayout(new BorderLayout());
-        add(new JLabel("Word Guessing Game"), BorderLayout.NORTH);
+
+        JLabel logoLabel;
+        URL imageUrl = getClass().getResource("/main/resources/app_logo.png");
+        if (imageUrl != null) {
+            ImageIcon originalIcon = new ImageIcon(imageUrl);
+            // Scale the image to fit, e.g., 200x200
+            Image scaledImage = originalIcon.getImage().getScaledInstance(200, 200, Image.SCALE_SMOOTH);
+            logoLabel = new JLabel(new ImageIcon(scaledImage));
+        } else {
+            logoLabel = new JLabel("App Logo Placeholder");
+            logoLabel.setPreferredSize(new Dimension(200, 200)); // Give it some size
+            System.err.println("App logo image not found at /main/resources/app_logo.png");
+        }
+        logoLabel.setHorizontalAlignment(JLabel.CENTER);
+        add(logoLabel, BorderLayout.NORTH);
 
         var buttonPanel = new JPanel(new GridLayout(0, 2, 8, 8));
         var profile = new JButton("Profile Setup");

@@ -4,11 +4,16 @@ import java.util.ArrayList;
 import java.util.List;
 import model.Records.GameLogEntry;
 import model.Records.PlayerProfile;
+import util.PersistenceService;
 
 public class AppController {
 
-    public AppController() {
-        this.gameLog = new ArrayList<>();
+    private final PersistenceService persistenceService;
+
+    public AppController(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+        this.currentProfile = persistenceService.loadPlayerProfile(); // Load on startup
+        this.gameLog = persistenceService.loadGameLogs(); // Load on startup
     }
 
     public PlayerProfile getCurrentProfile() {
@@ -17,6 +22,7 @@ public class AppController {
 
     public void setCurrentProfile(PlayerProfile currentProfile) {
         this.currentProfile = currentProfile;
+        persistenceService.savePlayerProfile(currentProfile); // Save immediately
     }
 
     public List<GameLogEntry> getGameLog() {
@@ -25,6 +31,7 @@ public class AppController {
 
     public void addGameLogEntry(GameLogEntry entry) {
         gameLog.add(entry);
+        persistenceService.saveGameLogs(gameLog); // Save immediately
     }
 
     PlayerProfile currentProfile;

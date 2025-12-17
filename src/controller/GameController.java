@@ -15,21 +15,50 @@ import model.Records.WordChoice;
 public class GameController {
 
     private final DictionaryService dictionaryService;
+    private final TimerController timerController;
 
-    public GameController(DictionaryService dictionaryService) {
+    public GameController(DictionaryService dictionaryService, TimerController timerController) {
         this.dictionaryService = dictionaryService;
+        this.timerController = timerController;
     }
 
     public GameState startNewGame(GameConfig config, WordChoice playerOneWord, WordChoice playerTwoWord) {
         var gameState = new GameState(config);
         gameState.setStatus(GameStatus.inProgress);
-        gameState.setPlayerOneWord(playerOneWord);
-        gameState.setPlayerTwoWord(playerTwoWord);
+
+        WordChoice actualPlayerOneWord = playerOneWord;
+        if (playerOneWord != null && playerOneWord.source() == model.Enums.WordSource.rollTheDice) {
+            actualPlayerOneWord = new WordChoice(dictionaryService.pickWord(config.wordLength()), model.Enums.WordSource.rollTheDice);
+        }
+        gameState.setPlayerOneWord(actualPlayerOneWord);
+
+        WordChoice actualPlayerTwoWord = playerTwoWord;
+        if (playerTwoWord != null && playerTwoWord.source() == model.Enums.WordSource.rollTheDice) {
+            actualPlayerTwoWord = new WordChoice(dictionaryService.pickWord(config.wordLength()), model.Enums.WordSource.rollTheDice);
+        }
+        gameState.setPlayerTwoWord(actualPlayerTwoWord);
+
+        // Timer logic
+        timerController.reset();
+        int gameTime = config.timerDuration().seconds();
+        if (config.timerDuration().isTimed()) {
+            if (config.playerOne() != null) {
+                timerController.setTimeForPlayer(config.playerOne(), gameTime);
+            }
+            if (config.playerTwo() != null) {
+                timerController.setTimeForPlayer(config.playerTwo(), gameTime);
+            }
+            timerController.start(gameState.getCurrentTurn());
+        }
         return gameState;
     }
 
     public String pickWord(model.Enums.WordLength wordLength) {
         return dictionaryService.pickWord(wordLength);
+    }
+
+    public boolean isValidWord(String word, model.Enums.WordLength wordLength) {
+        return dictionaryService.isValidWord(word, wordLength);
     }
 
     public GameState submitGuess(GameState gameState, GamePlayer player, String rawGuess) {
@@ -54,6 +83,9 @@ public class GameController {
         if (guess.length() != expectedLength) {
             throw new IllegalArgumentException("Guess must be " + expectedLength + " letters.");
         }
+        if (!dictionaryService.isValidWord(guess, gameState.getConfig().wordLength())) {
+            throw new IllegalArgumentException("'" + guess + "' is not a valid word.");
+        }
 
         WordChoice targetChoice = gameState.wordFor(player);
         if (targetChoice == null || targetChoice.word() == null) {
@@ -75,7 +107,22 @@ public class GameController {
         gameState.addGuess(entry);
 
         // --- State transition logic ---
+        GameStatus oldStatus = gameState.getStatus();
+        GamePlayer oldTurn = gameState.getCurrentTurn();
+
         gameState.applyGuessResult(player, result);
+
+        GameStatus newStatus = gameState.getStatus();
+        GamePlayer newTurn = gameState.getCurrentTurn();
+
+        // Orchestrate timer based on state changes
+        if (gameState.getConfig().timerDuration().isTimed()) {
+            if (newStatus == GameStatus.finished && oldStatus != GameStatus.finished) {
+                timerController.stop();
+            } else if (newTurn != oldTurn) {
+                timerController.start(newTurn);
+            }
+        }
         return gameState;
     }
 

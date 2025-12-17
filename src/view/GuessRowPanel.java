@@ -12,7 +12,10 @@ import model.Records.GuessResult;
 
 class GuessRowPanel extends JPanel {
 
+    private final Difficulty difficulty; // Store as instance variable
+
     GuessRowPanel(GuessResult result, Difficulty difficulty) {
+        this.difficulty = difficulty; // Initialize
         if (difficulty == Difficulty.expert) {
             setupExpert(result);
         } else {
@@ -47,15 +50,24 @@ class GuessRowPanel extends JPanel {
         label.setOpaque(true);
         label.setForeground(Color.WHITE);
 
-        Color bg = switch (fb) {
-            case correctPosition -> new Color(0x2E7D32); // green
-            case wrongPosition   -> new Color(0xF9A825); // yellow-orange
-            case notInWord       -> new Color(0xB71C1C); // red
-            case usedPresent     -> new Color(0x1565C0); // blue for "present but no position"
-            case usedNotPresent  -> new Color(0x424242); // dark gray
-            case unused          -> new Color(0x9E9E9E); // light gray
-            default              -> new Color(0x9E9E9E); // null or any unexpected value
-        };
+        Color bg;
+        if (difficulty == Difficulty.hard) {
+            bg = switch (fb) {
+                case correctPosition, wrongPosition -> new Color(0x2E7D32); // green for present in word
+                case notInWord       -> new Color(0xB71C1C); // red
+                default              -> new Color(0x9E9E9E); // default gray
+            };
+        } else { // Normal difficulty or others
+            bg = switch (fb) {
+                case correctPosition -> new Color(0x2E7D32); // green
+                case wrongPosition   -> new Color(0xF9A825); // yellow-orange
+                case notInWord       -> new Color(0xB71C1C); // red
+                case usedPresent     -> new Color(0x1565C0); // blue for "present but no position"
+                case usedNotPresent  -> new Color(0x424242); // dark gray
+                case unused          -> new Color(0x9E9E9E); // light gray
+                default              -> new Color(0x9E9E9E); // null or any unexpected value
+            };
+        }
 
         label.setBackground(bg);
         return label;
