@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import util.Constants;
 
 public final class ResourceLoader {
 
@@ -23,19 +24,19 @@ public final class ResourceLoader {
         // Private constructor to prevent instantiation
     }
 
-    public static Optional<ImageIcon> getImageIcon(String fileName, int width, int height) {
-        URL imageUrl = ResourceLoader.class.getResource(Constants.RESOURCES_PATH + fileName);
-        System.out.println(imageUrl);
+    public static Optional<ImageIcon> getImageIcon(String path, int width, int height) {
+        URL imageUrl = Thread.currentThread().getContextClassLoader().getResource(path);
         if (imageUrl != null) {
             ImageIcon originalIcon = new ImageIcon(imageUrl);
             if (originalIcon.getImageLoadStatus() == java.awt.MediaTracker.ERRORED) {
-                System.err.println("Error loading image: " + fileName);
+                System.err.println("Error loading image: " + path);
                 return Optional.empty();
             }
             Image scaledImage = getScaledImage(originalIcon.getImage(), width, height);
+            System.out.println("got image: " + path);
             return Optional.of(new ImageIcon(scaledImage));
         } else {
-            System.err.println("Image not found: " + Constants.RESOURCES_PATH + fileName);
+            System.err.println("Image not found: " + Constants.RESOURCES_PATH + path);
             return Optional.empty();
         }
     }
@@ -68,18 +69,4 @@ public final class ResourceLoader {
 
         return resizedImg;
     }
-	public static void main(String[] args) {
-		String filename="lonepine-independece.pngg";
-		System.out.println("\"\" "+ResourceLoader.class.getResource(""));
-		System.out.println("/ "+ResourceLoader.class.getResource("/"));
-		System.out.println( "/resources "+ResourceLoader.class.getResource("/resourses"));
-		System.out.println( "resources "+ResourceLoader.class.getResource("resourses"));
-		String path=Constants.RESOURCES_PATH+filename;
-		System.out.println("path: "+path);
-		System.out.println( "filename "+ResourceLoader.class.getResource(filename));
-		InputStream is = ResourceLoader.class.getResourceAsStream(path);
-		System.out.println(is);
-
-		
-	}
 }

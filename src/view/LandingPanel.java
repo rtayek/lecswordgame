@@ -16,7 +16,7 @@ class LandingPanel extends JPanel {
         setLayout(new BorderLayout());
 
         JLabel logoLabel;
-        ImageIcon appLogoIcon = ResourceLoader.getImageIcon("ap.png", 200, 200).orElse(null); // Use ResourceLoader and handle Optional
+        ImageIcon appLogoIcon = ResourceLoader.getImageIcon("app.png", 200, 200).orElse(null); // Use ResourceLoader and handle Optional
         if (appLogoIcon != null) {
             logoLabel = new JLabel(appLogoIcon);
         } else {
