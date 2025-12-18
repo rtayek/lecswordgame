@@ -2,16 +2,17 @@ package controller;
 
 import java.awt.event.ActionListener;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import javax.swing.Timer;
 import model.Records.GamePlayer;
 
-public class TimerController {
-	public interface Listener {
-		void onTimeUpdated(GamePlayer player,int remainingSeconds);
-		void onTimeExpired(GamePlayer player);
-	}
+/**
+ * Swing-backed implementation of TurnTimer.
+ */
+public class TimerController implements TurnTimer {
 
 	public TimerController() {
 		ActionListener timerListener = e -> {
@@ -22,29 +23,44 @@ public class TimerController {
 		swingTimer = new Timer(1000, timerListener);
 	}
 
-	public void setListener(Listener listener) {
-		this.listener=listener;
+	@Override
+	public void addListener(Listener listener) {
+		if (listener != null) {
+			listeners.add(listener);
+		}
 	}
 
+	@Override
+	public void removeListener(Listener listener) {
+		if (listener != null) {
+			listeners.remove(listener);
+		}
+	}
+
+	@Override
 	public void setTimeForPlayer(GamePlayer player,int seconds) {
 		remainingSeconds.put(player,seconds);
 		notifyUpdate(player);
 	}
 
+	@Override
 	public int getRemainingFor(GamePlayer player) {
 		return remainingSeconds.getOrDefault(player,0);
 	}
 
+	@Override
 	public void start(GamePlayer player) {
 		this.activePlayer = player;
 		swingTimer.start();
 	}
 
+	@Override
 	public void stop() {
 		swingTimer.stop();
 		this.activePlayer = null;
 	}
 
+	@Override
 	public void reset() {
 		stop();
 		remainingSeconds.clear();
@@ -65,19 +81,19 @@ public class TimerController {
 	}
 
 	private void notifyUpdate(GamePlayer player) {
-		if(listener!=null) {
-			listener.onTimeUpdated(player,getRemainingFor(player));
+		for (Listener l : listeners) {
+			l.onTimeUpdated(player,getRemainingFor(player));
 		}
 	}
 
 	private void notifyExpired(GamePlayer player) {
-		if(listener!=null) {
-			listener.onTimeExpired(player);
+		for (Listener l : listeners) {
+			l.onTimeExpired(player);
 		}
 	}
 
 	private final Timer swingTimer;
 	private final Map<GamePlayer,Integer> remainingSeconds=new HashMap<>();
-	private Listener listener;
+	private final Set<Listener> listeners=new HashSet<>();
 	private GamePlayer activePlayer;
 }

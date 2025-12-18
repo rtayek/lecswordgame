@@ -11,7 +11,7 @@ public class Main {
 			var persistenceService = new PersistenceService(); // Instantiate PersistenceService
 			var dictionaryService = new DictionaryService();
 			var timerController = new TimerController();
-			var gameController=new GameController(dictionaryService, timerController);
+			var gameController=new GameController(dictionaryService);
 			var appController=new AppController(persistenceService, gameController, timerController); // Pass to AppController
 			var frame=new MainFrame(appController, gameController, timerController, persistenceService); // Pass to MainFrame
 			appController.setNavigation(frame);

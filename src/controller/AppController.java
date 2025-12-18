@@ -16,95 +16,64 @@ import view.listeners.GameStateListener;
 
 public class AppController {
 
-    private final PersistenceService persistenceService;
-    private final GameController gameController;
-    private final TimerController timerController;
-    private Navigation navigation;
+    private final GameSessionService gameSessionService;
+    private final WordSelectionFlow wordSelectionFlow = new WordSelectionFlow();
+    private final ProfileService profileService;
+    private final NavigationCoordinator navigationCoordinator = new NavigationCoordinator();
     private GameState currentGameState;
     
-    // For word selection flow
-    private GameConfig pendingGameConfig;
-    private GamePlayer pendingPlayerOne;
-    private GamePlayer pendingPlayerTwo;
-    private WordChoice playerOneChosenWord;
-    private WordChoice playerTwoChosenWord;
-    
-    private final List<GameStateListener> gameStateListeners = new ArrayList<>();
-    private final List<GameEventListener> gameEventListeners = new ArrayList<>();
-    
-    PlayerProfile currentProfile;
-    final List<GameLogEntry> gameLog;
-
-    public AppController(PersistenceService persistenceService, GameController gameController, TimerController timerController) {
-        this.persistenceService = persistenceService;
-        this.gameController = gameController;
-        this.timerController = timerController;
-        this.currentProfile = persistenceService.loadPlayerProfile(); // Load on startup
-        this.gameLog = persistenceService.loadGameLogs(); // Load on startup
+    public AppController(PersistenceService persistenceService, GameController gameController, TurnTimer turnTimer) {
+        this.gameSessionService = new GameSessionService(gameController, turnTimer);
+        this.profileService = new ProfileService(persistenceService);
     }
     
     public void addGameStateListener(GameStateListener listener) {
-        gameStateListeners.add(listener);
+        gameSessionService.addStateListener(listener);
     }
     
     public void addGameEventListener(GameEventListener listener) {
-        gameEventListeners.add(listener);
+        gameSessionService.addEventListener(listener);
     }
     
     public void setNavigation(Navigation navigation) {
-        this.navigation = navigation;
+        navigationCoordinator.setNavigation(navigation);
     }
 
     public GameState getGameState() {
         return currentGameState;
     }
 
-    public void setGameState(GameState gameState) {
-        this.currentGameState = gameState;
-        gameStateListeners.forEach(l -> l.onGameStateUpdate(gameState));
-    }
-
     public void requestNewGame(GameConfig config) {
-        this.pendingGameConfig = config;
-        this.pendingPlayerOne = config.playerOne();
-        this.pendingPlayerTwo = config.playerTwo();
-        navigation.showWordSelection(config, config.playerOne(), config.playerTwo(), true);
+        wordSelectionFlow.start(config);
+        navigationCoordinator.showWordSelection(config, config.playerOne(), config.playerTwo(), true);
     }
     
     public void playerOneWordSelected(WordChoice wordChoice) {
-        this.playerOneChosenWord = wordChoice;
-        if (pendingGameConfig.mode() == model.Enums.GameMode.solo) {
-            // In solo mode, playerOne is the human guessing, playerTwo is computer whose word is chosen
-            // The wordChoice here is the computer's word (for playerTwo)
-            startGame(pendingGameConfig, pendingPlayerOne, pendingPlayerTwo, null, this.playerOneChosenWord);
-        } else { // Multiplayer
-            // Now ask Player Two to select their word
-            navigation.showWordSelection(pendingGameConfig, pendingPlayerOne, pendingPlayerTwo, false);
+        var startRequest = wordSelectionFlow.playerOneSelected(wordChoice);
+        if (startRequest != null) {
+            startGame(startRequest.config(), startRequest.playerOne(), startRequest.playerTwo(), startRequest.playerOneWord(), startRequest.playerTwoWord());
+        } else {
+            var cfg = wordSelectionFlow.getPendingConfig();
+            navigationCoordinator.showWordSelection(cfg, wordSelectionFlow.getPendingPlayerOne(), wordSelectionFlow.getPendingPlayerTwo(), false);
         }
     }
 
     public void playerTwoWordSelected(WordChoice wordChoice) {
-        this.playerTwoChosenWord = wordChoice;
-        startGame(pendingGameConfig, pendingPlayerOne, pendingPlayerTwo, this.playerOneChosenWord, this.playerTwoChosenWord);
+        var startRequest = wordSelectionFlow.playerTwoSelected(wordChoice);
+        startGame(startRequest.config(), startRequest.playerOne(), startRequest.playerTwo(), startRequest.playerOneWord(), startRequest.playerTwoWord());
     }
 
     private void startGame(GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, WordChoice p1Word, WordChoice p2Word) {
-        var state = gameController.startNewGame(config, p1Word, p2Word);
-        setGameState(state);
-        
-        gameEventListeners.forEach(l -> l.onGameStart(state));
-        
+        var state = gameSessionService.startNewGame(config, p1Word, p2Word);
+        this.currentGameState = state;
+
         if (config.mode() == model.Enums.GameMode.multiplayer) {
-            navigation.showMultiplayerGame();
+            navigationCoordinator.showMultiplayerGame();
         } else {
-            navigation.showSoloGame();
+            navigationCoordinator.showSoloGame();
         }
         // Clear pending states
-        this.pendingGameConfig = null;
-        this.pendingPlayerOne = null;
-        this.pendingPlayerTwo = null;
-        this.playerOneChosenWord = null;
-        this.playerTwoChosenWord = null;
+        wordSelectionFlow.clear();
     }
     
     public void submitGuess(String guess) {
@@ -112,36 +81,27 @@ public class AppController {
             return;
         }
         
-        var player = currentGameState.getCurrentTurn();
-        var outcome = gameController.submitGuess(currentGameState, player, guess);
-        
-        // The GameState is mutated by submitGuess, so we just need to notify listeners.
-        setGameState(currentGameState);
-        
-        if (currentGameState.getStatus() == model.Enums.GameStatus.finished) {
-            gameEventListeners.forEach(l -> l.onGameOver(currentGameState));
-        }
+        gameSessionService.submitGuess(guess);
+        currentGameState = gameSessionService.getCurrentGameState();
     }
 
     public PlayerProfile getCurrentProfile() {
-        return currentProfile;
+        return profileService.getCurrentProfile();
     }
 
     public void setCurrentProfile(PlayerProfile currentProfile) {
-        this.currentProfile = currentProfile;
-        persistenceService.savePlayerProfile(currentProfile); // Save immediately
+        profileService.saveProfile(currentProfile);
     }
 
     public List<GameLogEntry> getGameLog() {
-        return new ArrayList<>(gameLog);
+        return profileService.getGameLogs();
     }
 
     public void addGameLogEntry(GameLogEntry entry) {
-        gameLog.add(entry);
-        persistenceService.saveGameLogs(gameLog); // Save immediately
+        profileService.addGameLogEntry(entry);
     }
     
     public List<HardWordEntry> getHardestWords() {
-        return persistenceService.loadHardestWords();
+        return profileService.getHardestWords();
     }
 }

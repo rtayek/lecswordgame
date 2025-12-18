@@ -1,7 +1,7 @@
 package view;
 
 import controller.AppController;
-import controller.TimerController;
+import controller.TurnTimer;
 import view.listeners.GameEventListener;
 import view.listeners.GameStateListener;
 import java.awt.BorderLayout;
@@ -25,11 +25,11 @@ import model.Enums.GameMode;
 import util.SoundEffect;
 import util.ResourceLoader;
 
-class MultiplayerGamePanel extends JPanel implements TimerController.Listener, GameStateListener, GameEventListener {
+class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameStateListener, GameEventListener {
 
     private final AppController appController;
     private final Navigation navigation;
-    private final TimerController timerController;
+    private final TurnTimer timerController;
     private final GuessGridPanel leftGrid;
     private final GuessGridPanel rightGrid;
     private final JLabel currentPlayerLabel;
@@ -42,13 +42,14 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener, G
     private final JLabel statusLabel;
     private final JButton submitButton;
 
-    MultiplayerGamePanel(Navigation navigation, AppController appController, TimerController timerController) {
+    MultiplayerGamePanel(Navigation navigation, AppController appController, TurnTimer timerController) {
         this.navigation = navigation;
         this.appController = appController;
         this.timerController = timerController;
         
         appController.addGameStateListener(this);
         appController.addGameEventListener(this);
+        timerController.addListener(this);
 
         setLayout(new BorderLayout(8, 8));
 
@@ -234,7 +235,6 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener, G
 
     void onShow() {
         // This method is now only for visibility changes, not state initialization.
-        timerController.setListener(this);
         var state = appController.getGameState();
         updateCurrentPlayerLabel(state);
         if (state != null) {

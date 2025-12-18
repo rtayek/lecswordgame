@@ -1,0 +1,61 @@
+package controller;
+
+import model.GameState.GameConfig;
+import model.Records.GamePlayer;
+import view.Navigation;
+
+/**
+ * Thin wrapper around Navigation to centralize UI transitions.
+ */
+public class NavigationCoordinator {
+
+    private Navigation navigation;
+
+    public void setNavigation(Navigation navigation) {
+        this.navigation = navigation;
+    }
+
+    public Navigation getNavigation() {
+        return navigation;
+    }
+
+    public void showLanding() {
+        if (navigation != null) navigation.showLanding();
+    }
+
+    public void showProfileSetup() {
+        if (navigation != null) navigation.showProfileSetup();
+    }
+
+    public void showInstructions() {
+        if (navigation != null) navigation.showInstructions();
+    }
+
+    public void showFriends() {
+        if (navigation != null) navigation.showFriends();
+    }
+
+    public void showGameLog() {
+        if (navigation != null) navigation.showGameLog();
+    }
+
+    public void showHardestWords() {
+        if (navigation != null) navigation.showHardestWords();
+    }
+
+    public void showGameSetup() {
+        if (navigation != null) navigation.showGameSetup();
+    }
+
+    public void showWordSelection(GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, boolean isPlayerOneTurn) {
+        if (navigation != null) navigation.showWordSelection(config, playerOne, playerTwo, isPlayerOneTurn);
+    }
+
+    public void showMultiplayerGame() {
+        if (navigation != null) navigation.showMultiplayerGame();
+    }
+
+    public void showSoloGame() {
+        if (navigation != null) navigation.showSoloGame();
+    }
+}

@@ -17,41 +17,24 @@ import model.Records.GuessOutcome;
 public class GameController {
 
     private final DictionaryService dictionaryService;
-    private final TimerController timerController;
 
-    public GameController(DictionaryService dictionaryService, TimerController timerController) {
+    public GameController(DictionaryService dictionaryService) {
         this.dictionaryService = dictionaryService;
-        this.timerController = timerController;
     }
 
     public GameState startNewGame(GameConfig config, WordChoice playerOneWord, WordChoice playerTwoWord) {
         var gameState = new GameState(config);
-        gameState.setStatus(GameStatus.inProgress);
 
         WordChoice actualPlayerOneWord = playerOneWord;
         if (playerOneWord != null && playerOneWord.source() == model.Enums.WordSource.rollTheDice) {
             actualPlayerOneWord = new WordChoice(dictionaryService.pickWord(config.wordLength()), model.Enums.WordSource.rollTheDice);
         }
-        gameState.setPlayerOneWord(actualPlayerOneWord);
 
         WordChoice actualPlayerTwoWord = playerTwoWord;
         if (playerTwoWord != null && playerTwoWord.source() == model.Enums.WordSource.rollTheDice) {
             actualPlayerTwoWord = new WordChoice(dictionaryService.pickWord(config.wordLength()), model.Enums.WordSource.rollTheDice);
         }
-        gameState.setPlayerTwoWord(actualPlayerTwoWord);
-
-        // Timer logic
-        timerController.reset();
-        int gameTime = config.timerDuration().seconds();
-        if (config.timerDuration().isTimed()) {
-            if (config.playerOne() != null) {
-                timerController.setTimeForPlayer(config.playerOne(), gameTime);
-            }
-            if (config.playerTwo() != null) {
-                timerController.setTimeForPlayer(config.playerTwo(), gameTime);
-            }
-            timerController.start(gameState.getCurrentTurn());
-        }
+        gameState.initializeForPlay(actualPlayerOneWord, actualPlayerTwoWord);
         return gameState;
     }
 
@@ -110,14 +93,6 @@ public class GameController {
         GameStatus newStatus = gameState.getStatus();
         GamePlayer newTurn = gameState.getCurrentTurn();
 
-        // Orchestrate timer based on state changes
-        if (gameState.getConfig().timerDuration().isTimed()) {
-            if (newStatus == GameStatus.finished && oldStatus != GameStatus.finished) {
-                timerController.stop();
-            } else if (newTurn != oldTurn) {
-                timerController.start(newTurn);
-            }
-        }
         return new GuessOutcome(entry, newStatus, newTurn);
     }
 

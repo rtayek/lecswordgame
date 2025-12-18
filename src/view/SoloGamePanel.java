@@ -1,7 +1,7 @@
 package view;
 
 import controller.AppController;
-import controller.TimerController;
+import controller.TurnTimer;
 import view.listeners.GameEventListener;
 import view.listeners.GameStateListener;
 import java.awt.BorderLayout;
@@ -28,12 +28,12 @@ import model.Enums.GameStatus;
 import util.ResourceLoader; // Import ResourceLoader
 import util.SoundEffect;
 
-class SoloGamePanel extends JPanel implements TimerController.Listener, GameStateListener, GameEventListener {
+class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameStateListener, GameEventListener {
 
     private final AppController appController;
-    private final TimerController timerController;
+    private final TurnTimer timerController;
 
-    SoloGamePanel(Navigation navigation, AppController appController, TimerController timerController) {
+    SoloGamePanel(Navigation navigation, AppController appController, TurnTimer timerController) {
         this.navigation = navigation;
         this.appController = appController;
         this.timerController = timerController;
@@ -41,6 +41,7 @@ class SoloGamePanel extends JPanel implements TimerController.Listener, GameStat
         
         appController.addGameStateListener(this);
         appController.addGameEventListener(this);
+        timerController.addListener(this);
 
         setLayout(new BorderLayout(8, 8));
         
@@ -80,7 +81,6 @@ class SoloGamePanel extends JPanel implements TimerController.Listener, GameStat
     }
 
     public void onShow() {
-        timerController.setListener(this);
         // This is now just for visibility changes, not state initialization
     }
 

@@ -72,16 +72,25 @@ public class GameState {
         return new ArrayList<>(guesses);
     }
 
-    public void setStatus(GameStatus status) {
+    /**
+     * Initialize the game with chosen words and mark in progress.
+     */
+    public void initializeForPlay(WordChoice playerOneWord, WordChoice playerTwoWord) {
+        setStatus(GameStatus.inProgress);
+        setPlayerOneWord(playerOneWord);
+        setPlayerTwoWord(playerTwoWord);
+    }
+
+    void setStatus(GameStatus status) {
         this.status = status;
     }
 
-    public void setPlayerOneWord(WordChoice playerOneWord) {
+    void setPlayerOneWord(WordChoice playerOneWord) {
         validateWordLength(playerOneWord);
         this.playerOneWord = playerOneWord;
     }
 
-    public void setPlayerTwoWord(WordChoice playerTwoWord) {
+    void setPlayerTwoWord(WordChoice playerTwoWord) {
         validateWordLength(playerTwoWord);
         this.playerTwoWord = playerTwoWord;
     }
@@ -96,7 +105,7 @@ public class GameState {
         return winner;
     }
 
-    public void setWinner(GamePlayer winner) {
+    void setWinner(GamePlayer winner) {
         this.winner = winner;
     }
 
@@ -117,7 +126,7 @@ public class GameState {
         return Objects.equals(player, config.playerOne()) ? config.playerTwo() : config.playerOne();
     }
 
-    public void setPlayerFinishState(GamePlayer player, FinishState state) {
+    void setPlayerFinishState(GamePlayer player, FinishState state) {
         if (player == null) return;
         if (Objects.equals(player, config.playerOne())) {
             this.playerOneFinishState = state;

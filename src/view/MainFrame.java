@@ -2,7 +2,7 @@ package view;
 
 import controller.AppController;
 import controller.GameController;
-import controller.TimerController;
+import controller.TurnTimer;
 import util.PersistenceService;
 import model.GameState;
 import model.GameState.GameConfig;
@@ -16,7 +16,7 @@ import java.awt.CardLayout; // Missing Import
 class MainFrame extends JFrame implements Navigation {
     private final AppController appController;
 
-    public MainFrame(AppController appController, GameController gameController, TimerController timerController, PersistenceService persistenceService) {
+    public MainFrame(AppController appController, GameController gameController, TurnTimer timerController, PersistenceService persistenceService) {
         super("Word Guessing Game");
         this.appController = appController;
         this.gameController = gameController;
@@ -26,23 +26,23 @@ class MainFrame extends JFrame implements Navigation {
         setSize(900, 700);
         setLocationRelativeTo(null);
 
-        var landing = new LandingPanel(this);
-        var profile = new ProfileSetupPanel(this, appController); // Pass appController for profile loading/saving
-        var instructions = new InstructionsPanel(this);
-        var friends = new FriendsPanel(this);
-        var gameLog = new GameLogPanel(this, appController); // Pass appController for game log
-        var hardest = new HardestWordsPanel(this, appController); // Pass persistenceService directly
-        var setup = new GameSetupPanel(this, appController);
+        landingPanel = new LandingPanel(this);
+        profilePanel = new ProfileSetupPanel(this, appController); // Pass appController for profile loading/saving
+        instructionsPanel = new InstructionsPanel(this);
+        friendsPanel = new FriendsPanel(this);
+        gameLogPanel = new GameLogPanel(this, appController); // Pass appController for game log
+        hardestWordsPanel = new HardestWordsPanel(this, appController); // Pass persistenceService directly
+        setupPanel = new GameSetupPanel(this, appController);
         multiplayer = new MultiplayerGamePanel(this, appController, timerController);
         solo = new SoloGamePanel(this, appController, timerController);
 
-        cards.add(landing, cardLanding);
-        cards.add(profile, cardProfile);
-        cards.add(instructions, cardInstructions);
-        cards.add(friends, cardFriends);
-        cards.add(gameLog, cardLog);
-        cards.add(hardest, cardHardest);
-        cards.add(setup, cardSetup);
+        cards.add(landingPanel, cardLanding);
+        cards.add(profilePanel, cardProfile);
+        cards.add(instructionsPanel, cardInstructions);
+        cards.add(friendsPanel, cardFriends);
+        cards.add(gameLogPanel, cardLog);
+        cards.add(hardestWordsPanel, cardHardest);
+        cards.add(setupPanel, cardSetup);
         cards.add(multiplayer, cardMulti);
         cards.add(solo, cardSolo);
 
@@ -52,7 +52,10 @@ class MainFrame extends JFrame implements Navigation {
 
     @Override
     public void showWordSelection(GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, boolean isPlayerOneTurn) {
-        WordSelectionPanel wordSelectionPanel = new WordSelectionPanel(appController, gameController, config, playerOne, playerTwo, isPlayerOneTurn);
+        if (wordSelectionPanel != null) {
+            cards.remove(wordSelectionPanel);
+        }
+        wordSelectionPanel = new WordSelectionPanel(appController, gameController, config, playerOne, playerTwo, isPlayerOneTurn);
         cards.add(wordSelectionPanel, cardWordSelection);
         layout.show(cards, cardWordSelection);
     }
@@ -79,11 +82,13 @@ class MainFrame extends JFrame implements Navigation {
 
     @Override
     public void showGameLog() {
+        gameLogPanel.onShow();
         layout.show(cards, cardLog);
     }
 
     @Override
     public void showHardestWords() {
+        hardestWordsPanel.onShow();
         layout.show(cards, cardHardest);
     }
 
@@ -122,6 +127,14 @@ class MainFrame extends JFrame implements Navigation {
     private final MultiplayerGamePanel multiplayer;
     private final SoloGamePanel solo;
     private final GameController gameController;
-    private final TimerController timerController;
+    private final TurnTimer timerController;
     private final PersistenceService persistenceService;
+    private final LandingPanel landingPanel;
+    private final ProfileSetupPanel profilePanel;
+    private final InstructionsPanel instructionsPanel;
+    private final FriendsPanel friendsPanel;
+    private final GameLogPanel gameLogPanel;
+    private final HardestWordsPanel hardestWordsPanel;
+    private final GameSetupPanel setupPanel;
+    private WordSelectionPanel wordSelectionPanel;
 }
