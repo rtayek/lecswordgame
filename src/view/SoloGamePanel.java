@@ -3,6 +3,7 @@ package view;
 import controller.AppController;
 import controller.GameOutcomePresenter;
 import controller.TurnTimer;
+import view.OutcomeRenderer;
 import view.listeners.GameEventListener;
 import view.listeners.GameStateListener;
 import java.awt.BorderLayout;
@@ -96,22 +97,7 @@ class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameStateListe
 
     @Override
     public void onGameStateUpdate(GameState newState) {
-        if (newState.getGuesses().isEmpty()) {
-            return;
-        }
-        var latestGuess = newState.getGuesses().get(newState.getGuesses().size() - 1);
-        var result = latestGuess.result();
-        var difficulty = newState.getConfig().difficulty();
-        
-        grid.addGuessRow(new GuessRowPanel(result, difficulty));
-
-        if (result.exactMatch()) {
-            setStatus("You solved it!");
-        } else if (difficulty == Difficulty.expert) {
-            setStatus("Correct letters: " + result.correctLetterCount());
-        } else {
-            setStatus(result.correctLetterCount() + " letters are correct.");
-        }
+        // Passive updates only: timers, labels, enabling/disabling handled elsewhere.
     }
 
     @Override
@@ -121,7 +107,22 @@ class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameStateListe
     
     private void handleGuess() {
         try {
-            appController.submitGuess(guessField.getText());
+            var outcome = appController.submitGuess(guessField.getText());
+            var result = outcome.entry().result();
+            var difficulty = appController.getGameState().getConfig().difficulty();
+            grid.addGuessRow(new GuessRowPanel(result, difficulty));
+
+            if (result.exactMatch()) {
+                setStatus("You solved it!");
+            } else if (difficulty == Difficulty.expert) {
+                setStatus("Correct letters: " + result.correctLetterCount());
+            } else {
+                setStatus(result.correctLetterCount() + " letters are correct.");
+            }
+
+            if (outcome.status() == model.enums.GameStatus.finished) {
+                onGameFinished(appController.getGameState(), null);
+            }
             guessField.setText("");
         } catch (Exception e) {
             setStatus(e.getMessage());

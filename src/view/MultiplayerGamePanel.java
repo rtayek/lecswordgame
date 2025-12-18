@@ -3,6 +3,7 @@ package view;
 import controller.AppController;
 import controller.GameOutcomePresenter;
 import controller.TurnTimer;
+import view.OutcomeRenderer;
 import view.listeners.GameEventListener;
 import view.listeners.GameStateListener;
 import java.awt.BorderLayout;
@@ -145,25 +146,7 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
 
     @Override
     public void onGameStateUpdate(GameState newState) {
-        if (newState.getGuesses().isEmpty()) {
-            updateCurrentPlayerLabel(newState);
-            return;
-        }
-        var latestGuess = newState.getGuesses().get(newState.getGuesses().size() - 1);
-        var result = latestGuess.result();
-        var difficulty = newState.getConfig().difficulty();
-
-        if (latestGuess.player().equals(newState.getConfig().playerOne())) {
-            leftGrid.addGuessRow(new GuessRowPanel(result, difficulty));
-        } else {
-            rightGrid.addGuessRow(new GuessRowPanel(result, difficulty));
-        }
-        
         updateCurrentPlayerLabel(newState);
-
-        if (newState.getStatus() == GameStatus.waitingForFinalGuess) {
-            onGameEnd(newState, null);
-        }
     }
 
     @Override
@@ -173,7 +156,22 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
 
     private void handleGuess() {
         try {
-            appController.submitGuess(guessField.getText());
+            var outcome = appController.submitGuess(guessField.getText());
+            var result = outcome.entry().result();
+            var difficulty = appController.getGameState().getConfig().difficulty();
+
+            if (outcome.entry().player().equals(appController.getGameState().getConfig().playerOne())) {
+                leftGrid.addGuessRow(new GuessRowPanel(result, difficulty));
+            } else {
+                rightGrid.addGuessRow(new GuessRowPanel(result, difficulty));
+            }
+
+            if (outcome.status() == model.enums.GameStatus.waitingForFinalGuess
+                    || outcome.status() == model.enums.GameStatus.finished) {
+                onGameEnd(appController.getGameState(), null);
+            } else {
+                updateCurrentPlayerLabel(appController.getGameState());
+            }
             guessField.setText("");
         } catch (Exception e) {
             setStatus(e.getMessage());
