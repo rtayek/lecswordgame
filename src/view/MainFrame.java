@@ -14,9 +14,11 @@ import javax.swing.JPanel; // Missing Import
 import java.awt.CardLayout; // Missing Import
 
 class MainFrame extends JFrame implements Navigation {
+    private final AppController appController;
 
     public MainFrame(AppController appController, GameController gameController, TimerController timerController, PersistenceService persistenceService) {
         super("Word Guessing Game");
+        this.appController = appController;
         this.gameController = gameController;
         this.timerController = timerController;
         this.persistenceService = persistenceService; // Initialize
@@ -29,10 +31,10 @@ class MainFrame extends JFrame implements Navigation {
         var instructions = new InstructionsPanel(this);
         var friends = new FriendsPanel(this);
         var gameLog = new GameLogPanel(this, appController); // Pass appController for game log
-        var hardest = new HardestWordsPanel(this, persistenceService); // Pass persistenceService directly
-        var setup = new GameSetupPanel(this, gameController);
-        multiplayer = new MultiplayerGamePanel(this, gameController);
-        solo = new SoloGamePanel(this, gameController);
+        var hardest = new HardestWordsPanel(this, appController); // Pass persistenceService directly
+        var setup = new GameSetupPanel(this, appController);
+        multiplayer = new MultiplayerGamePanel(this, appController, timerController);
+        solo = new SoloGamePanel(this, appController, timerController);
 
         cards.add(landing, cardLanding);
         cards.add(profile, cardProfile);
@@ -50,65 +52,11 @@ class MainFrame extends JFrame implements Navigation {
 
     @Override
     public void showWordSelection(GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, boolean isPlayerOneTurn) {
-        this.pendingGameConfig = config;
-        this.pendingPlayerOne = playerOne;
-        this.pendingPlayerTwo = playerTwo;
-        
-        WordSelectionPanel wordSelectionPanel = new WordSelectionPanel(this, gameController, config, playerOne, playerTwo, isPlayerOneTurn);
+        WordSelectionPanel wordSelectionPanel = new WordSelectionPanel(appController, gameController, config, playerOne, playerTwo, isPlayerOneTurn);
         cards.add(wordSelectionPanel, cardWordSelection);
         layout.show(cards, cardWordSelection);
     }
-
-    @Override
-    public void playerOneWordSelected(WordChoice wordChoice) {
-        this.playerOneChosenWord = wordChoice;
-        if (pendingGameConfig.mode() == model.Enums.GameMode.solo) {
-            // In solo mode, playerOne is the human guessing, playerTwo is computer whose word is chosen
-            // The wordChoice here is the computer's word (for playerTwo)
-            startGame(pendingGameConfig, pendingPlayerOne, pendingPlayerTwo, null, this.playerOneChosenWord);
-        } else { // Multiplayer
-            // Now ask Player Two to select their word
-            showWordSelection(pendingGameConfig, pendingPlayerOne, pendingPlayerTwo, false);
-        }
-    }
-
-    @Override
-    public void playerTwoWordSelected(WordChoice wordChoice) {
-        this.playerTwoChosenWord = wordChoice;
-        startGame(pendingGameConfig, pendingPlayerOne, pendingPlayerTwo, this.playerOneChosenWord, this.playerTwoChosenWord);
-    }
-
-    private void startGame(GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, WordChoice p1Word, WordChoice p2Word) {
-        var state = gameController.startNewGame(config, p1Word, p2Word);
-        setGameState(state);
-        if (config.mode() == model.Enums.GameMode.multiplayer) {
-            showMultiplayerGame();
-        } else {
-            showSoloGame();
-        }
-        // Clear pending states
-        this.pendingGameConfig = null;
-        this.pendingPlayerOne = null;
-        this.pendingPlayerTwo = null;
-        this.playerOneChosenWord = null;
-        this.playerTwoChosenWord = null;
-    }
     
-    @Override
-    public GameState getGameState() {
-        return this.currentGameState;
-    }
-
-    @Override
-    public void setGameState(GameState state) {
-        this.currentGameState = state;
-    }
-
-    @Override
-    public TimerController getTimerController() {
-        return this.timerController;
-    }
-
     @Override
     public void showLanding() {
         layout.show(cards, cardLanding);
@@ -173,15 +121,7 @@ class MainFrame extends JFrame implements Navigation {
     private final JPanel cards = new JPanel(layout);
     private final MultiplayerGamePanel multiplayer;
     private final SoloGamePanel solo;
+    private final GameController gameController;
     private final TimerController timerController;
-    private final GameController gameController; 
-    private final PersistenceService persistenceService; // Correctly placed PersistenceService
-    
-    // For word selection flow
-    private GameConfig pendingGameConfig;
-    private GamePlayer pendingPlayerOne;
-    private GamePlayer pendingPlayerTwo;
-    private WordChoice playerOneChosenWord;
-    private WordChoice playerTwoChosenWord;
-    private GameState currentGameState;
+    private final PersistenceService persistenceService;
 }

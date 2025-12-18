@@ -9,11 +9,12 @@ public class Main {
 	public static void main(String[] args) {
 		SwingUtilities.invokeLater(()-> {
 			var persistenceService = new PersistenceService(); // Instantiate PersistenceService
-			var appController=new AppController(persistenceService); // Pass to AppController
 			var dictionaryService = new DictionaryService();
 			var timerController = new TimerController();
 			var gameController=new GameController(dictionaryService, timerController);
+			var appController=new AppController(persistenceService, gameController, timerController); // Pass to AppController
 			var frame=new MainFrame(appController, gameController, timerController, persistenceService); // Pass to MainFrame
+			appController.setNavigation(frame);
 			frame.setVisible(true);
 		});
 	}

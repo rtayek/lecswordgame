@@ -1,6 +1,6 @@
 package view;
 
-import controller.GameController;
+import controller.AppController;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
@@ -12,7 +12,6 @@ import model.Enums.*;
 import model.GameState.GameConfig;
 import model.Records.GamePlayer;
 import model.Records.PlayerProfile;
-import model.Records.WordChoice;
 
 class GameSetupPanel extends JPanel {
 
@@ -20,9 +19,7 @@ class GameSetupPanel extends JPanel {
     private JComboBox<Difficulty> difficultyComboBox;
     private JComboBox<TimerDuration> timerDurationComboBox;
 
-    GameSetupPanel(Navigation navigation, GameController gameController) {
-        this.navigation = navigation;
-        this.gameController = gameController;
+    GameSetupPanel(Navigation navigation, AppController appController) {
         setLayout(new BorderLayout(8, 8));
         add(new JLabel("Game Setup"), BorderLayout.NORTH);
 
@@ -61,7 +58,7 @@ class GameSetupPanel extends JPanel {
             var playerTwo = new GamePlayer(new PlayerProfile("Player 2", ""), true);
 
             var config = createConfig(GameMode.multiplayer, playerOne, playerTwo);
-            navigation.showWordSelection(config, playerOne, playerTwo, true);
+            appController.requestNewGame(config);
         });
 
         var solo = new JButton("Start Solo");
@@ -69,10 +66,7 @@ class GameSetupPanel extends JPanel {
             var player = new GamePlayer(new PlayerProfile("You", ""), true); // Human player
             var computerPlayer = new GamePlayer(new PlayerProfile("Computer", ""), false); // Computer player
             var config = createConfig(GameMode.solo, player, computerPlayer);
-            // In solo mode, the human player guesses the computer's word.
-            // So playerOne (human) is implicitly guessing playerTwo's (computer's) word.
-            // We ask playerTwo (computer) to "select" its word first.
-            navigation.showWordSelection(config, player, computerPlayer, false); 
+            appController.requestNewGame(config);
         });
 
         gameButtonsPanel.add(multiplayer);
@@ -94,22 +88,5 @@ class GameSetupPanel extends JPanel {
         return new GameConfig(mode, selectedDifficulty, selectedWordLength, selectedTimerDuration, playerOne, playerTwo);
     }
 
-    private WordChoice[] pickWords(WordLength length, int count) {
-        WordChoice[] choices = new WordChoice[count];
-        for (int i = 0; i < count; i++) {
-            String word;
-            int attempts = 0;
-            // Ensure unique words if picking multiple
-            do {
-                word = gameController.pickWord(length);
-                attempts++;
-            } while (i > 0 && word.equalsIgnoreCase(choices[i - 1].word()) && attempts < 3); // Limit attempts to avoid infinite loop
-            choices[i] = new WordChoice(word, WordSource.rollTheDice); // For now, always computer picks
-        }
-        return choices;
-    }
-
-    private final Navigation navigation;
-    private final GameController gameController;
     static final long serialVersionUID = 1L;
 }

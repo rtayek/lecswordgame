@@ -1,5 +1,6 @@
 package view;
 
+import controller.AppController;
 import java.awt.BorderLayout;
 import java.util.List;
 import javax.swing.JButton;
@@ -8,17 +9,16 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
-import model.Records.HardWordEntry; // Import the shared record
-import util.PersistenceService;
+import model.Records.HardWordEntry;
 
 class HardestWordsPanel extends JPanel {
 
-    private final PersistenceService persistenceService; // Add PersistenceService
+    private final AppController appController;
     private DefaultTableModel tableModel;
     private JTable hardestWordsTable;
 
-    HardestWordsPanel(Navigation navigation, PersistenceService persistenceService) { // Update constructor
-        this.persistenceService = persistenceService; // Initialize PersistenceService
+    HardestWordsPanel(Navigation navigation, AppController appController) {
+        this.appController = appController;
 
         setLayout(new BorderLayout(8, 8));
         
@@ -45,7 +45,7 @@ class HardestWordsPanel extends JPanel {
 
     public void onShow() {
         tableModel.setRowCount(0); // Clear existing data
-        List<HardWordEntry> hardWords = persistenceService.loadHardestWords();
+        List<HardWordEntry> hardWords = appController.getHardestWords();
 
         for (HardWordEntry entry : hardWords) {
             tableModel.addRow(new Object[]{

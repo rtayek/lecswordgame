@@ -96,14 +96,7 @@ public class GameController {
         String target = targetChoice.word().trim();
 
         // --- Evaluate the guess ---
-        GuessResult result;
-        Difficulty difficulty = gameState.getConfig().difficulty();
-        switch (difficulty) {
-            case normal -> result = evaluateNormal(guess, target);
-            case hard -> result = evaluateHard(guess, target);
-            case expert -> result = evaluateExpert(guess, target);
-            default -> throw new IllegalStateException("Unhandled difficulty: " + difficulty);
-        }
+        GuessResult result = evaluateGuess(guess, target, gameState.getConfig().difficulty());
 
         GuessEntry entry = new GuessEntry(player, result, System.currentTimeMillis());
         gameState.addGuess(entry);
@@ -128,67 +121,42 @@ public class GameController {
         return new GuessOutcome(entry, newStatus, newTurn);
     }
 
-    private GuessResult evaluateNormal(String guess, String target) {
+    private GuessResult evaluateGuess(String guess, String target, Difficulty difficulty) {
         List<EvaluatedLetter> evaluatedLetters = evaluateCore(guess, target);
         List<LetterFeedback> feedback = new ArrayList<>();
         int correctLetterCount = 0;
         boolean exactMatch = true;
 
         for (EvaluatedLetter el : evaluatedLetters) {
-            if (el.type() == MatchResultType.CORRECT_POSITION) {
-                feedback.add(LetterFeedback.correctPosition);
-                correctLetterCount++;
-            } else if (el.type() == MatchResultType.WRONG_POSITION) {
-                feedback.add(LetterFeedback.wrongPosition);
-                correctLetterCount++; // Still "correct" in terms of being present
-                exactMatch = false;
-            } else {
-                feedback.add(LetterFeedback.notInWord);
-                exactMatch = false;
-            }
-        }
-        return new GuessResult(guess, feedback, correctLetterCount, exactMatch);
-    }
+            switch (el.type()) {
+                case CORRECT_POSITION:
+                    correctLetterCount++;
+                    if (difficulty == Difficulty.normal || difficulty == Difficulty.hard) {
+                        feedback.add(LetterFeedback.correctPosition);
+                    }
+                    break;
 
-    private GuessResult evaluateHard(String guess, String target) {
-        List<EvaluatedLetter> evaluatedLetters = evaluateCore(guess, target);
-        List<LetterFeedback> feedback = new ArrayList<>();
-        int correctLetterCount = 0;
-        boolean exactMatch = true;
-
-        for (EvaluatedLetter el : evaluatedLetters) {
-            if (el.type() == MatchResultType.CORRECT_POSITION) {
-                feedback.add(LetterFeedback.correctPosition);
-                correctLetterCount++;
-            } else if (el.type() == MatchResultType.WRONG_POSITION) {
-                feedback.add(LetterFeedback.wrongPosition);
-                correctLetterCount++;
-                exactMatch = false;
-            } else {
-                feedback.add(LetterFeedback.notInWord);
-                exactMatch = false;
-            }
-        }
-        return new GuessResult(guess, feedback, correctLetterCount, exactMatch);
-    }
-
-    private GuessResult evaluateExpert(String guess, String target) {
-        List<EvaluatedLetter> evaluatedLetters = evaluateCore(guess, target);
-        int correctLetterCount = 0;
-        boolean exactMatch = true;
-
-        for (EvaluatedLetter el : evaluatedLetters) {
-            if (el.type() == MatchResultType.CORRECT_POSITION || el.type() == MatchResultType.WRONG_POSITION) {
-                correctLetterCount++;
-                if (el.type() == MatchResultType.WRONG_POSITION) {
+                case WRONG_POSITION:
+                    correctLetterCount++;
                     exactMatch = false;
-                }
-            } else {
-                exactMatch = false;
+                    if (difficulty == Difficulty.normal || difficulty == Difficulty.hard) {
+                        feedback.add(LetterFeedback.wrongPosition);
+                    }
+                    break;
+
+                case NOT_IN_WORD:
+                    exactMatch = false;
+                    if (difficulty == Difficulty.normal || difficulty == Difficulty.hard) {
+                        feedback.add(LetterFeedback.notInWord);
+                    }
+                    break;
             }
         }
-        return new GuessResult(guess, List.of(), correctLetterCount, exactMatch);
+
+        // For expert mode, feedback list is intentionally empty
+        return new GuessResult(guess, feedback, correctLetterCount, exactMatch);
     }
+
 
     private List<EvaluatedLetter> evaluateCore(String guess, String target) {
         int length = guess.length();

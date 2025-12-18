@@ -1,5 +1,6 @@
 package view;
 
+import controller.AppController;
 import controller.GameController;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -21,20 +22,21 @@ import util.ResourceLoader; // Added: Import ResourceLoader
 
 class WordSelectionPanel extends JPanel {
 
-    private final Navigation navigation;
+    private final AppController appController;
     private final GameController gameController;
     private final GameConfig gameConfig;
     private final GamePlayer currentPlayer;
     private final GamePlayer opponentPlayer;
     private final boolean isPlayerOneTurn;
+    private boolean rolledByDice = false;
 
     private JTextField wordInput;
     private JLabel wordLengthHint;
     private JButton rollTheDiceButton;
     private JButton confirmWordButton;
 
-    WordSelectionPanel(Navigation navigation, GameController gameController, GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, boolean isPlayerOneTurn) {
-        this.navigation = navigation;
+    WordSelectionPanel(AppController appController, GameController gameController, GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, boolean isPlayerOneTurn) {
+        this.appController = appController;
         this.gameController = gameController;
         this.gameConfig = config;
         this.isPlayerOneTurn = isPlayerOneTurn;
@@ -83,6 +85,7 @@ class WordSelectionPanel extends JPanel {
     private void rollTheDice() {
         String chosenWord = gameController.pickWord(gameConfig.wordLength());
         wordInput.setText(chosenWord);
+        rolledByDice = true;
     }
 
     private void confirmWord() {
@@ -100,17 +103,15 @@ class WordSelectionPanel extends JPanel {
              return;
         }
 
-        WordChoice wordChoice = new WordChoice(chosenWord, WordSource.manual); // Assume manual if entered
-        if (wordInput.getText().equals(gameController.pickWord(gameConfig.wordLength()))) { // Simple check if it was 'rolled'
-            wordChoice = new WordChoice(chosenWord, WordSource.rollTheDice);
-        }
+        WordChoice wordChoice = new WordChoice(chosenWord, rolledByDice ? WordSource.rollTheDice : WordSource.manual);
+        rolledByDice = false; // reset for next time
         
         // This is where we need to pass the word back to GameSetupPanel or start the game
         // For now, we navigate back, in a real scenario, this would trigger the next step of setup
         if (isPlayerOneTurn) {
-            navigation.playerOneWordSelected(wordChoice);
+            appController.playerOneWordSelected(wordChoice);
         } else {
-            navigation.playerTwoWordSelected(wordChoice);
+            appController.playerTwoWordSelected(wordChoice);
         }
     }
 

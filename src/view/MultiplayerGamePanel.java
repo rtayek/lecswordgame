@@ -1,7 +1,9 @@
 package view;
 
-import controller.GameController;
+import controller.AppController;
 import controller.TimerController;
+import view.listeners.GameEventListener;
+import view.listeners.GameStateListener;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import javax.swing.JButton;
@@ -23,12 +25,30 @@ import model.Enums.GameMode;
 import util.SoundEffect;
 import util.ResourceLoader;
 
-class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
+class MultiplayerGamePanel extends JPanel implements TimerController.Listener, GameStateListener, GameEventListener {
 
-    MultiplayerGamePanel(Navigation navigation, GameController gameController) {
+    private final AppController appController;
+    private final Navigation navigation;
+    private final TimerController timerController;
+    private final GuessGridPanel leftGrid;
+    private final GuessGridPanel rightGrid;
+    private final JLabel currentPlayerLabel;
+    private final JLabel playerOneLabel;
+    private final JLabel playerTwoLabel;
+    private final JLabel playerOneTimerLabel;
+    private final JLabel playerTwoTimerLabel;
+    private final JTextField guessField;
+    private final KeyboardPanel keyboardPanel;
+    private final JLabel statusLabel;
+    private final JButton submitButton;
+
+    MultiplayerGamePanel(Navigation navigation, AppController appController, TimerController timerController) {
         this.navigation = navigation;
-        this.gameController = gameController;
-        navigation.getTimerController().setListener(this);
+        this.appController = appController;
+        this.timerController = timerController;
+        
+        appController.addGameStateListener(this);
+        appController.addGameEventListener(this);
 
         setLayout(new BorderLayout(8, 8));
 
@@ -96,43 +116,65 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
         add(controls, BorderLayout.WEST);
     }
 
-    private void handleGuess() {
-        GuessUIHelper.Outcome outcome = GuessUIHelper.submitGuess(
-                navigation,
-                gameController,
-                gs -> gs.getCurrentTurn(),
-                guessField.getText(),
-                "No active game. Start a multiplayer game first."
-        );
+    @Override
+    public void onGameStart(GameState initialState) {
+        leftGrid.clearRows();
+        rightGrid.clearRows();
+        setStatus(" ");
+        guessField.setText("");
+        guessField.setEnabled(true);
+        keyboardPanel.setEnabled(true);
+        submitButton.setEnabled(true);
 
-        if (outcome.isError()) {
-            setStatus(outcome.errorMessage());
-            submitButton.setEnabled(false);
+        var p1 = initialState.getConfig().playerOne();
+        var p2 = initialState.getConfig().playerTwo();
+
+        var name1 = p1 != null && p1.profile() != null ? p1.profile().username() : "Player 1";
+        var name2 = p2 != null && p2.profile() != null ? p2.profile().username() : "Player 2";
+
+        playerOneLabel.setText(name1);
+        playerTwoLabel.setText(name2);
+        
+        updateTimerLabel(playerOneTimerLabel, initialState.getConfig().timerDuration().seconds());
+        updateTimerLabel(playerTwoTimerLabel, initialState.getConfig().timerDuration().seconds());
+
+        updateCurrentPlayerLabel(initialState);
+    }
+
+    @Override
+    public void onGameStateUpdate(GameState newState) {
+        if (newState.getGuesses().isEmpty()) {
+            updateCurrentPlayerLabel(newState);
             return;
         }
+        var latestGuess = newState.getGuesses().get(newState.getGuesses().size() - 1);
+        var result = latestGuess.result();
+        var difficulty = newState.getConfig().difficulty();
 
-        var state = outcome.state();
-        var result = outcome.result();
-        var difficulty = state.getConfig().difficulty();
-
-        if (outcome.player() == state.getConfig().playerOne()) {
+        if (latestGuess.player().equals(newState.getConfig().playerOne())) {
             leftGrid.addGuessRow(new GuessRowPanel(result, difficulty));
         } else {
             rightGrid.addGuessRow(new GuessRowPanel(result, difficulty));
         }
-
-        guessField.setText("");
-        setStatus(" ");
         
-        updateCurrentPlayerLabel(state); // Update with state from outcome
+        updateCurrentPlayerLabel(newState);
 
-        var finished = state.getStatus() == GameStatus.finished;
-        submitButton.setEnabled(!finished);
-        guessField.setEnabled(!finished);
-        keyboardPanel.setEnabled(!finished); // Also disable keyboard
+        if (newState.getStatus() == GameStatus.waitingForFinalGuess) {
+            onGameEnd(newState);
+        }
+    }
 
-        if (state.getStatus() == GameStatus.finished || state.getStatus() == GameStatus.waitingForFinalGuess) {
-            onGameEnd(state);
+    @Override
+    public void onGameOver(GameState finalState) {
+        onGameEnd(finalState);
+    }
+
+    private void handleGuess() {
+        try {
+            appController.submitGuess(guessField.getText());
+            guessField.setText("");
+        } catch (Exception e) {
+            setStatus(e.getMessage());
         }
     }
 
@@ -151,8 +193,8 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
         if (state == null) {
             currentPlayerLabel.setText("Current player: (none)");
             submitButton.setEnabled(false);
-            guessField.setEnabled(false); // Also disable guess field
-            keyboardPanel.setEnabled(false); // Also disable keyboard
+            guessField.setEnabled(false);
+            keyboardPanel.setEnabled(false);
             return;
         }
 
@@ -161,10 +203,7 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
             if (winner == null) {
                 currentPlayerLabel.setText("Game finished: It's a Tie!");
             } else {
-                var name = winner.profile() != null ? winner.profile().username() : null;
-                if (name == null || name.isBlank()) {
-                    name = winner == state.getConfig().playerOne() ? "Player 1" : "Player 2";
-                }
+                var name = winner.profile() != null ? winner.profile().username() : (winner.equals(state.getConfig().playerOne()) ? "Player 1" : "Player 2");
                 currentPlayerLabel.setText(name + " wins!");
             }
             submitButton.setEnabled(false);
@@ -177,138 +216,94 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
         if (player == null || player.profile() == null) {
             currentPlayerLabel.setText("Current player: (none)");
             submitButton.setEnabled(false);
-            guessField.setEnabled(false); // Also disable guess field
-            keyboardPanel.setEnabled(false); // Also disable keyboard
+            guessField.setEnabled(false);
+            keyboardPanel.setEnabled(false);
             return;
         }
 
         var name = player.profile().username();
         if (name == null || name.isBlank()) {
-            name = player == state.getConfig().playerOne() ? "Player 1" : "Player 2";
+            name = player.equals(state.getConfig().playerOne()) ? "Player 1" : "Player 2";
         }
 
         currentPlayerLabel.setText("Current player: " + name);
         submitButton.setEnabled(true);
-        guessField.setEnabled(true); // Re-enable if game is not finished
-        keyboardPanel.setEnabled(true); // Re-enable if game is not finished
+        guessField.setEnabled(true);
+        keyboardPanel.setEnabled(true);
     }
 
     void onShow() {
-        var state = navigation.getGameState();
-        leftGrid.clearRows();
-        rightGrid.clearRows();
-        setStatus(" ");
-
-        if (state != null) {
-            var p1 = state.getConfig().playerOne();
-            var p2 = state.getConfig().playerTwo();
-
-            var name1 = p1 != null && p1.profile() != null ? p1.profile().username() : null;
-            var name2 = p2 != null && p2.profile() != null ? p2.profile().username() : null;
-
-            if (name1 == null || name1.isBlank()) {
-                name1 = "Player 1";
-            }
-            if (name2 == null || name2.isBlank()) {
-                name2 = "Player 2";
-            }
-
-            playerOneLabel.setText(name1);
-            playerTwoLabel.setText(name2);
-
-            int p1Time = navigation.getTimerController().getRemainingFor(p1);
-            int p2Time = navigation.getTimerController().getRemainingFor(p2);
-            updateTimerLabel(playerOneTimerLabel, p1Time);
-            updateTimerLabel(playerTwoTimerLabel, p2Time);
-
-        } else {
-            playerOneLabel.setText("Player 1");
-            playerTwoLabel.setText("Player 2");
-            updateTimerLabel(playerOneTimerLabel, 0);
-            updateTimerLabel(playerTwoTimerLabel, 0);
-        }
-
+        // This method is now only for visibility changes, not state initialization.
+        timerController.setListener(this);
+        var state = appController.getGameState();
         updateCurrentPlayerLabel(state);
+        if (state != null) {
+            updateTimerLabel(playerOneTimerLabel, timerController.getRemainingFor(state.getConfig().playerOne()));
+            updateTimerLabel(playerTwoTimerLabel, timerController.getRemainingFor(state.getConfig().playerTwo()));
+        }
     }
 
     @Override
     public void onTimeUpdated(GamePlayer player, int remainingSeconds) {
-        var state = navigation.getGameState();
+        var state = appController.getGameState();
         if (state == null) return;
         
-        JLabel labelToUpdate = (player == state.getConfig().playerOne()) ? playerOneTimerLabel : playerTwoTimerLabel;
+        JLabel labelToUpdate = (player.equals(state.getConfig().playerOne())) ? playerOneTimerLabel : playerTwoTimerLabel;
         updateTimerLabel(labelToUpdate, remainingSeconds);
     }
 
     @Override
     public void onTimeExpired(GamePlayer player) {
-        var state = navigation.getGameState();
+        var state = appController.getGameState();
         if (state == null) return;
 
         String name = player.profile().username();
         if (name == null || name.isBlank()) {
-            name = player == state.getConfig().playerOne() ? "Player 1" : "Player 2";
+            name = player.equals(state.getConfig().playerOne()) ? "Player 1" : "Player 2";
         }
         setStatus(name + " ran out of time!");
     }
-
+    
     private void updateTimerLabel(JLabel label, int totalSeconds) {
         int minutes = totalSeconds / 60;
         int seconds = totalSeconds % 60;
         label.setText(String.format("%02d:%02d", minutes, seconds));
 
-        // Determine if timer should be red
         boolean isTimerRed = false;
-        var gameState = navigation.getGameState();
+        var gameState = appController.getGameState();
         if (gameState != null && gameState.getConfig().timerDuration().isTimed()) {
             int gameDuration = gameState.getConfig().timerDuration().seconds();
-            if (gameDuration >= 3 * 60 && totalSeconds < 60) { // 3-5 minute games, under 1 minute
+            if (gameDuration >= 3 * 60 && totalSeconds < 60) {
                 isTimerRed = true;
-            } else if (gameDuration == 1 * 60 && totalSeconds < 30) { // 1 minute game, under 30 seconds
+            } else if (gameDuration == 1 * 60 && totalSeconds < 30) {
                 isTimerRed = true;
             }
         }
         label.setForeground(isTimerRed ? Color.RED : Color.BLACK);
     }
-
-    private final Navigation navigation;
-    private final GameController gameController;
-    private final JLabel currentPlayerLabel;
-    private final GuessGridPanel leftGrid;
-    private final GuessGridPanel rightGrid;
-    private final KeyboardPanel keyboardPanel;
-    private final JTextField guessField;
-    private final JLabel playerOneLabel;
-    private final JLabel playerTwoLabel;
-    private final JLabel statusLabel;
-    private final JButton submitButton;
-    private final JLabel playerOneTimerLabel;
-    private final JLabel playerTwoTimerLabel;
-
+    
     private void onGameEnd(GameState state) {
         if (state.getStatus() == GameStatus.waitingForFinalGuess) {
-            GamePlayer lastGuesser = state.getOpponent(state.getCurrentTurn()); // The one who just guessed correctly
-            GamePlayer opponent = state.getCurrentTurn(); // The one who gets last chance
+            GamePlayer lastGuesser = state.getOpponent(state.getCurrentTurn());
+            GamePlayer opponent = state.getCurrentTurn();
 
             JOptionPane.showMessageDialog(
                 this,
-                "%s guessed the word! %s, you get one last chance to guess %s's word.".formatted(
+                String.format("%s guessed the word! %s, you get one last chance to guess %s's word.",
                     lastGuesser.profile().username(),
                     opponent.profile().username(),
-                    lastGuesser.profile().username() // Whose word the opponent needs to guess
+                    lastGuesser.profile().username()
                 ),
                 "Last Chance!",
                 JOptionPane.INFORMATION_MESSAGE
             );
             submitButton.setEnabled(true);
             guessField.setEnabled(true);
-            keyboardPanel.setEnabled(true); // Re-enable keyboard
-            // The turn has already been switched by GameState.applyGuessResult
-            updateCurrentPlayerLabel(state); // Pass state
+            keyboardPanel.setEnabled(true);
+            updateCurrentPlayerLabel(state);
             return;
         }
 
-        // GameStatus is finished
         String message;
         SoundEffect soundEffect;
         String graphicFile;
@@ -316,84 +311,38 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
         GamePlayer playerOne = state.getConfig().playerOne();
         GamePlayer playerTwo = state.getConfig().playerTwo();
 
-        if (winner == null) { // Tie
+        if (winner == null) {
             soundEffect = SoundEffect.TIE;
-            graphicFile = "tie.png"; // Assuming tie graphic
+            graphicFile = "tie.png";
             message = "It's a Tie! Both players guessed the word.";
-        } else if (winner.equals(playerOne) || winner.equals(playerTwo)) { // A player won
+        } else {
             soundEffect = SoundEffect.WIN;
             graphicFile = "win.png";
-            
             GamePlayer winningPlayer = winner;
             GamePlayer losingPlayer = (winner.equals(playerOne)) ? playerTwo : playerOne;
             
-            // "Did you know this word?" prompt for the winner
             int choice = JOptionPane.showConfirmDialog(
                 this,
-                "%s, you guessed the word! Did you know this word?".formatted(winningPlayer.profile().username()),
+                String.format("%s, you guessed the word! Did you know this word?", winningPlayer.profile().username()),
                 "Win Condition",
                 JOptionPane.YES_NO_OPTION
             );
 
             if (choice == JOptionPane.NO_OPTION) {
-                // If winner didn't know, they win automatically
-                message = "Congratulations, %s! You won because you didn't know the word!".formatted(winningPlayer.profile().username());
+                message = String.format("Congratulations, %s! You won because you didn't know the word!", winningPlayer.profile().username());
             } else {
-                // If winner knew, and opponent also guessed their word, it's a tie
                 if (state.getPlayerFinishState(losingPlayer) == FinishState.FINISHED_SUCCESS) {
                     soundEffect = SoundEffect.TIE;
                     graphicFile = "tie.png";
-                    winner = null; // Mark as tie
+                    winner = null;
                     message = "It's a Tie! Both of you knew your words.";
                 } else {
-                    message = "Congratulations, %s! You won!".formatted(winningPlayer.profile().username());
+                    message = String.format("Congratulations, %s! You won!", winningPlayer.profile().username());
                 }
-            }
-        } else { // Someone lost, and didn't guess their word on last chance
-            soundEffect = SoundEffect.LOSE;
-            graphicFile = "lose.png";
-            GamePlayer loser = state.getOpponent(winner); // The one who failed the last guess
-            String targetWord = state.wordFor(loser).word();
-            message = "Game Over for %s! The word was: %s. %s wins!".formatted(
-                loser.profile().username(),
-                targetWord,
-                winner.profile().username()
-            );
-
-            // Offer to shift into solo-mode
-            int soloChoice = JOptionPane.showConfirmDialog(
-                this,
-                "%s, you failed to guess the word. Would you like to continue guessing in solo mode?".formatted(loser.profile().username()),
-                "Continue in Solo Mode?",
-                JOptionPane.YES_NO_OPTION
-            );
-
-            if (soloChoice == JOptionPane.YES_OPTION) {
-                // Create new solo game state for the loser to continue guessing the opponent's word
-                GameConfig soloConfig = new GameConfig(
-                    GameMode.solo,
-                    state.getConfig().difficulty(),
-                    state.getConfig().wordLength(),   // Correct position for WordLength
-                    state.getConfig().timerDuration(), // Correct position for TimerDuration
-                    loser,                            // Correct position for playerOne
-                    state.getOpponent(loser)          // Correct position for playerTwo
-                );
-                // The word to guess is the one the loser failed to guess
-                WordChoice wordToGuess = state.wordFor(loser);
-                
-                // This will need to be properly managed by navigation to create a new SoloGamePanel
-                // For now, a placeholder to show the intent
-                // navigation.showSoloGameWithConfig(soloConfig, wordToGuess); // This method would need to be added to Navigation
-                JOptionPane.showMessageDialog(this, "Transitioning to solo mode (feature to be implemented fully).");
-                navigation.showLanding(); // For now, go to landing
-                return;
             }
         }
         
-        // Play sound
         ResourceLoader.playSound(soundEffect);
-
-        // Display graphic
         ImageIcon graphic = ResourceLoader.getImageIcon(graphicFile, 100, 100).orElse(null);
         JOptionPane.showMessageDialog(
             this,
@@ -402,9 +351,7 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
             JOptionPane.INFORMATION_MESSAGE,
             graphic
         );
-
-        // Optionally navigate back to setup or landing
-        navigation.showGameSetup(); // Or showLanding()
+        navigation.showGameSetup();
     }
 
     private static final long serialVersionUID = 1L;

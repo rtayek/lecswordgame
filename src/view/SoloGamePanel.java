@@ -1,7 +1,9 @@
 package view;
 
-import controller.GameController;
+import controller.AppController;
 import controller.TimerController;
+import view.listeners.GameEventListener;
+import view.listeners.GameStateListener;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import javax.swing.JButton;
@@ -26,13 +28,19 @@ import model.Enums.GameStatus;
 import util.ResourceLoader; // Import ResourceLoader
 import util.SoundEffect;
 
-class SoloGamePanel extends JPanel implements TimerController.Listener {
+class SoloGamePanel extends JPanel implements TimerController.Listener, GameStateListener, GameEventListener {
 
-    SoloGamePanel(Navigation navigation, GameController gameController) {
+    private final AppController appController;
+    private final TimerController timerController;
+
+    SoloGamePanel(Navigation navigation, AppController appController, TimerController timerController) {
         this.navigation = navigation;
-        this.gameController = gameController;
+        this.appController = appController;
+        this.timerController = timerController;
         this.player = new GamePlayer(new PlayerProfile("You", ""), true);
-        navigation.getTimerController().setListener(this);
+        
+        appController.addGameStateListener(this);
+        appController.addGameEventListener(this);
 
         setLayout(new BorderLayout(8, 8));
         
@@ -72,35 +80,30 @@ class SoloGamePanel extends JPanel implements TimerController.Listener {
     }
 
     public void onShow() {
+        timerController.setListener(this);
+        // This is now just for visibility changes, not state initialization
+    }
+
+    @Override
+    public void onGameStart(GameState initialState) {
         grid.clearRows();
         guessField.setText("");
+        guessField.setEnabled(true);
+        keyboardPanel.setEnabled(true);
         setStatus("New game started. Make your guess!");
-        var state = navigation.getGameState();
-        if (state != null) {
-            updateTimerLabel(playerTimerLabel, navigation.getTimerController().getRemainingFor(player));
-        } else {
-            updateTimerLabel(playerTimerLabel, 0);
-        }
+        updateTimerLabel(playerTimerLabel, initialState.getConfig().timerDuration().seconds());
     }
-    
-    private void handleGuess() {
-        GuessUIHelper.Outcome outcome = GuessUIHelper.submitGuess(
-                navigation,
-                gameController,
-                gs -> player,
-                guessField.getText(),
-                "Please start a new game from the setup screen."
-        );
 
-        if (outcome.isError()) {
-            setStatus(outcome.errorMessage());
+    @Override
+    public void onGameStateUpdate(GameState newState) {
+        if (newState.getGuesses().isEmpty()) {
             return;
         }
-
-        var result = outcome.result();
-        var difficulty = outcome.state().getConfig().difficulty();
+        var latestGuess = newState.getGuesses().get(newState.getGuesses().size() - 1);
+        var result = latestGuess.result();
+        var difficulty = newState.getConfig().difficulty();
+        
         grid.addGuessRow(new GuessRowPanel(result, difficulty));
-        guessField.setText("");
 
         if (result.exactMatch()) {
             setStatus("You solved it!");
@@ -109,9 +112,19 @@ class SoloGamePanel extends JPanel implements TimerController.Listener {
         } else {
             setStatus(result.correctLetterCount() + " letters are correct.");
         }
+    }
 
-        if (outcome.state().getStatus() == GameStatus.finished) {
-            onGameFinished(outcome.state());
+    @Override
+    public void onGameOver(GameState finalState) {
+        onGameFinished(finalState);
+    }
+    
+    private void handleGuess() {
+        try {
+            appController.submitGuess(guessField.getText());
+            guessField.setText("");
+        } catch (Exception e) {
+            setStatus(e.getMessage());
         }
     }
     
@@ -187,7 +200,7 @@ class SoloGamePanel extends JPanel implements TimerController.Listener {
 
     @Override
     public void onTimeUpdated(GamePlayer player, int remainingSeconds) {
-        var state = navigation.getGameState();
+        var state = appController.getGameState();
         if (state == null || player == null || !player.equals(this.player)) return; // Only update for this player
 
         updateTimerLabel(playerTimerLabel, remainingSeconds);
@@ -195,7 +208,7 @@ class SoloGamePanel extends JPanel implements TimerController.Listener {
 
     @Override
     public void onTimeExpired(GamePlayer player) {
-        var state = navigation.getGameState();
+        var state = appController.getGameState();
         if (state == null || player == null || !player.equals(this.player)) return; // Only update for this player
         
         setStatus(player.profile().username() + " ran out of time!");
@@ -208,7 +221,7 @@ class SoloGamePanel extends JPanel implements TimerController.Listener {
 
         // Determine if timer should be red
         boolean isTimerRed = false;
-        var gameState = navigation.getGameState();
+        var gameState = appController.getGameState();
         if (gameState != null && gameState.getConfig().timerDuration().isTimed()) {
             int gameDuration = gameState.getConfig().timerDuration().seconds();
             if (gameDuration >= 3 * 60 && totalSeconds < 60) { // 3-5 minute games, under 1 minute
@@ -223,7 +236,6 @@ class SoloGamePanel extends JPanel implements TimerController.Listener {
     private static final long serialVersionUID = 1L;
 
     private final Navigation navigation;
-    private final GameController gameController;
     private final GamePlayer player; // Assuming this is the solo player
     private final GuessGridPanel grid;
     private final KeyboardPanel keyboardPanel;
