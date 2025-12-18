@@ -5,5 +5,5 @@ public final class Constants {
         // Private constructor to prevent instantiation
     }
 
-    public static final String RESOURCES_PATH = "/";
+    public static final String RESOURCES_PATH = "";
 }

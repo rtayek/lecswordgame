@@ -25,7 +25,7 @@ public final class ResourceLoader {
     }
 
     public static Optional<ImageIcon> getImageIcon(String path, int width, int height) {
-        URL imageUrl = Thread.currentThread().getContextClassLoader().getResource(path);
+        URL imageUrl = ResourceLoader.class.getResource("/" + path); // Always prepend / for absolute classpath lookup
         if (imageUrl != null) {
             ImageIcon originalIcon = new ImageIcon(imageUrl);
             if (originalIcon.getImageLoadStatus() == java.awt.MediaTracker.ERRORED) {
@@ -36,7 +36,7 @@ public final class ResourceLoader {
             System.out.println("got image: " + path);
             return Optional.of(new ImageIcon(scaledImage));
         } else {
-            System.err.println("Image not found: " + Constants.RESOURCES_PATH + path);
+            System.err.println("Image not found: /" + path); // Corrected error message
             return Optional.empty();
         }
     }
