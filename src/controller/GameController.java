@@ -18,13 +18,13 @@ import controller.evaluator.NormalEvaluator;
 
 public class GameController {
 
-    private final DictionaryService dictionaryService;
+    private final WordService wordService;
     private final GuessEvaluator normalEvaluator = new NormalEvaluator();
     private final GuessEvaluator hardEvaluator = new HardEvaluator();
     private final GuessEvaluator expertEvaluator = new ExpertEvaluator();
 
-    public GameController(DictionaryService dictionaryService) {
-        this.dictionaryService = dictionaryService;
+    public GameController(WordService wordService) {
+        this.wordService = wordService;
     }
 
     public GameState startNewGame(GameConfig config, WordChoice playerOneWord, WordChoice playerTwoWord) {
@@ -32,23 +32,23 @@ public class GameController {
 
         WordChoice actualPlayerOneWord = playerOneWord;
         if (playerOneWord != null && playerOneWord.source() == model.enums.WordSource.rollTheDice) {
-            actualPlayerOneWord = new WordChoice(dictionaryService.pickWord(config.wordLength()), model.enums.WordSource.rollTheDice);
+            actualPlayerOneWord = new WordChoice(wordService.pickWord(config.wordLength()), model.enums.WordSource.rollTheDice);
         }
 
         WordChoice actualPlayerTwoWord = playerTwoWord;
         if (playerTwoWord != null && playerTwoWord.source() == model.enums.WordSource.rollTheDice) {
-            actualPlayerTwoWord = new WordChoice(dictionaryService.pickWord(config.wordLength()), model.enums.WordSource.rollTheDice);
+            actualPlayerTwoWord = new WordChoice(wordService.pickWord(config.wordLength()), model.enums.WordSource.rollTheDice);
         }
         gameState.startWithChosenWords(config, actualPlayerOneWord, actualPlayerTwoWord);
         return gameState;
     }
 
     public String pickWord(WordLength wordLength) {
-        return dictionaryService.pickWord(wordLength);
+        return wordService.pickWord(wordLength);
     }
 
     public boolean isValidWord(String word, WordLength wordLength) {
-        return dictionaryService.isValidWord(word, wordLength);
+        return wordService.isValidWord(word, wordLength);
     }
 
     public GuessOutcome submitGuess(GameState gameState, GamePlayer player, String rawGuess) {
@@ -73,7 +73,7 @@ public class GameController {
         if (guess.length() != expectedLength) {
             throw new IllegalArgumentException("Guess must be " + expectedLength + " letters.");
         }
-        if (!dictionaryService.isValidWord(guess, gameState.getConfig().wordLength())) {
+        if (!wordService.isValidWord(guess, gameState.getConfig().wordLength())) {
             throw new IllegalArgumentException("'" + guess + "' is not a valid word.");
         }
 

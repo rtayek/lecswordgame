@@ -85,6 +85,27 @@ public class GameState {
     }
 
     /**
+     * Apply post-win adjudication based on whether the winner knew the word.
+     */
+    public void applyWinnerKnowledge(boolean winnerKnewWord) {
+        if (status != GameStatus.finished && status != GameStatus.soloContinue) {
+            return;
+        }
+        if (winner == null) {
+            return;
+        }
+        if (config.mode() == GameMode.multiplayer && winnerKnewWord) {
+            GamePlayer opponent = getOpponent(winner);
+            if (getPlayerFinishState(opponent) == FinishState.finishedSuccess) {
+                finishWithWinner(null); // tie
+                return;
+            }
+        }
+        // otherwise winner stands; mark finished
+        finishWithWinner(winner);
+    }
+
+    /**
      * Handle a timer expiration for the given player: opponent wins by forfeit.
      */
     public void handleTimeout(GamePlayer expiredPlayer) {
@@ -181,6 +202,7 @@ public class GameState {
         } else {
             if (isFinalGuess) {
                 markPlayerFinished(player, FinishState.finishedFail);
+                setStatus(GameStatus.soloContinue); // allow optional continue for fun
                 finishWithWinner(opponent);
             } else {
                 switchTurn();

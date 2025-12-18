@@ -1,9 +1,9 @@
 package util;
 
 public enum SoundEffect {
-    WIN("win.wav"),
-    LOSE("lose.wav"),
-    TIE("tie.wav");
+    win("win.wav"),
+    lose("lose.wav"),
+    tie("tie.wav");
 
     private final String fileName;
 

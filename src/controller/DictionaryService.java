@@ -12,11 +12,12 @@ import java.util.stream.Collectors;
 
 import model.enums.WordLength;
 import util.Constants; // Correctly placed import
+import controller.WordService;
 
 /**
  * A service responsible for providing words from a dictionary.
  */
-public class DictionaryService {
+public class DictionaryService implements WordService {
 
     private static final Map<WordLength, Set<String>> WORD_BANK = new ConcurrentHashMap<>();
     private final Random random = new Random();
@@ -67,6 +68,7 @@ public class DictionaryService {
         }
     }
 
+    @Override
     public String pickWord(WordLength wordLength) {
         Set<String> words = WORD_BANK.get(wordLength);
         if (words == null || words.isEmpty()) {
@@ -76,6 +78,7 @@ public class DictionaryService {
         return words.toArray(new String[0])[idx];
     }
 
+    @Override
     public boolean isValidWord(String word, WordLength wordLength) {
         if (word == null || word.isEmpty()) {
             return false;

@@ -21,6 +21,7 @@ class GameLogPanel extends JPanel {
         this.appController = appController; // Initialize AppController
 
         setLayout(new BorderLayout(8, 8));
+        setBackground(new java.awt.Color(0xFFF8E1)); // pale amber
         
         JLabel titleLabel = new JLabel("Game Log");
         titleLabel.setHorizontalAlignment(JLabel.CENTER);

@@ -11,9 +11,11 @@ import model.Records.HardWordEntry;
 import model.Records.PlayerProfile;
 import model.Records.WordChoice;
 import model.enums.GameMode;
+import model.enums.WordLength;
 import util.PersistenceService;
 import view.Navigation;
-import view.listeners.GameEventListener;
+import controller.events.GameEvent;
+import controller.events.GameEventListener;
 import view.listeners.GameStateListener;
 
 public class AppController {
@@ -22,9 +24,12 @@ public class AppController {
     private final WordSelectionFlow wordSelectionFlow = new WordSelectionFlow();
     private final ProfileService profileService;
     private final NavigationCoordinator navigationCoordinator = new NavigationCoordinator();
+    private final TurnTimer turnTimer;
+
     public AppController(PersistenceService persistenceService, GameController gameController, TurnTimer turnTimer) {
         this.gameSessionService = new GameSessionService(gameController, turnTimer);
         this.profileService = new ProfileService(persistenceService);
+        this.turnTimer = turnTimer;
     }
     
     public void addGameStateListener(GameStateListener listener) {
@@ -100,5 +105,21 @@ public class AppController {
     
     public List<HardWordEntry> getHardestWords() {
         return profileService.getHardestWords();
+    }
+
+    public String pickWord(WordLength length) {
+        return gameSessionService.pickWord(length);
+    }
+
+    public boolean isValidWord(String word, WordLength length) {
+        return gameSessionService.isValidWord(word, length);
+    }
+
+    public void reportWinnerKnowledge(boolean winnerKnewWord) {
+        gameSessionService.applyWinnerKnowledge(winnerKnewWord);
+    }
+
+    public TurnTimer getTurnTimer() {
+        return turnTimer;
     }
 }

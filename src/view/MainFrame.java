@@ -1,9 +1,6 @@
 package view;
 
 import controller.AppController;
-import controller.GameController;
-import controller.TurnTimer;
-import util.PersistenceService;
 import model.GameState;
 import model.GameState.GameConfig;
 import model.Records.GamePlayer;
@@ -15,16 +12,16 @@ import java.awt.CardLayout; // Missing Import
 
 class MainFrame extends JFrame implements Navigation {
     private final AppController appController;
+    private final controller.TurnTimer timerController;
 
-    public MainFrame(AppController appController, GameController gameController, TurnTimer timerController, PersistenceService persistenceService) {
+    public MainFrame(AppController appController) {
         super("Word Guessing Game");
         this.appController = appController;
-        this.gameController = gameController;
-        this.timerController = timerController;
-        this.persistenceService = persistenceService; // Initialize
+        this.timerController = appController.getTurnTimer();
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(900, 700);
         setLocationRelativeTo(null);
+        getContentPane().setBackground(new java.awt.Color(0x0D1B2A)); // deep navy backdrop for frame
 
         landingPanel = new LandingPanel(this);
         profilePanel = new ProfileSetupPanel(this, appController); // Pass appController for profile loading/saving
@@ -33,8 +30,8 @@ class MainFrame extends JFrame implements Navigation {
         gameLogPanel = new GameLogPanel(this, appController); // Pass appController for game log
         hardestWordsPanel = new HardestWordsPanel(this, appController); // Pass persistenceService directly
         setupPanel = new GameSetupPanel(this, appController);
-        multiplayer = new MultiplayerGamePanel(this, appController, timerController);
-        solo = new SoloGamePanel(this, appController, timerController);
+        multiplayer = new MultiplayerGamePanel(this, appController);
+        solo = new SoloGamePanel(this, appController);
 
         cards.add(landingPanel, cardLanding);
         cards.add(profilePanel, cardProfile);
@@ -53,7 +50,7 @@ class MainFrame extends JFrame implements Navigation {
     @Override
     public void showWordSelection(GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, boolean isPlayerOneTurn) {
         if (wordSelectionPanel == null) {
-            wordSelectionPanel = new WordSelectionPanel(appController, gameController, config, playerOne, playerTwo, isPlayerOneTurn);
+            wordSelectionPanel = new WordSelectionPanel(appController, config, playerOne, playerTwo, isPlayerOneTurn);
             cards.add(wordSelectionPanel, cardWordSelection);
         } else {
             wordSelectionPanel.setContext(config, playerOne, playerTwo, isPlayerOneTurn);
@@ -109,6 +106,11 @@ class MainFrame extends JFrame implements Navigation {
         solo.onShow();
         layout.show(cards, cardSolo);
     }
+    
+    @Override
+    public controller.TurnTimer getTimerController() {
+        return timerController;
+    }
 
     private static final long serialVersionUID = 1L;
 
@@ -127,9 +129,6 @@ class MainFrame extends JFrame implements Navigation {
     private final JPanel cards = new JPanel(layout);
     private final MultiplayerGamePanel multiplayer;
     private final SoloGamePanel solo;
-    private final GameController gameController;
-    private final TurnTimer timerController;
-    private final PersistenceService persistenceService;
     private final LandingPanel landingPanel;
     private final ProfileSetupPanel profilePanel;
     private final InstructionsPanel instructionsPanel;

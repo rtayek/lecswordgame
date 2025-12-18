@@ -13,6 +13,7 @@ class LandingPanel extends JPanel {
 
     LandingPanel(Navigation navigation) {
         setLayout(new BorderLayout());
+        setBackground(new java.awt.Color(0x102542)); // midnight blue
 
         JLabel logoLabel;
         ImageIcon appLogoIcon = ResourceLoader.getImageIcon("app.png", 200, 200).orElse(null); // Use ResourceLoader and handle Optional

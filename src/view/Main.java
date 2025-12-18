@@ -1,19 +1,12 @@
 package view;
 import controller.AppController;
-import controller.DictionaryService;
-import controller.GameController;
-import controller.TimerController;
-import util.PersistenceService; // Import PersistenceService
+import controller.AppFactory;
 import javax.swing.SwingUtilities;
 public class Main {
 	public static void main(String[] args) {
 		SwingUtilities.invokeLater(()-> {
-			var persistenceService = new PersistenceService(); // Instantiate PersistenceService
-			var dictionaryService = new DictionaryService();
-			var timerController = new TimerController();
-			var gameController=new GameController(dictionaryService);
-			var appController=new AppController(persistenceService, gameController, timerController); // Pass to AppController
-			var frame=new MainFrame(appController, gameController, timerController, persistenceService); // Pass to MainFrame
+			var appController = AppFactory.create(); // Build with default dependencies
+			var frame=new MainFrame(appController); // Only appController goes to UI
 			appController.setNavigation(frame);
 			frame.setVisible(true);
 		});

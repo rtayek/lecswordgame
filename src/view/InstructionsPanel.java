@@ -11,6 +11,7 @@ class InstructionsPanel extends JPanel {
 
     InstructionsPanel(Navigation navigation) {
         setLayout(new BorderLayout(8, 8));
+        setBackground(new java.awt.Color(0xFFF3E0)); // soft peach
         add(new JLabel("Instructions"), BorderLayout.NORTH);
 
         var text = new JTextArea("""

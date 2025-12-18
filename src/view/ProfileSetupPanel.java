@@ -31,6 +31,7 @@ class ProfileSetupPanel extends JPanel {
 
         setLayout(new BorderLayout(15, 15)); // Add some padding
         setBorder(new EmptyBorder(20, 20, 20, 20));
+        setBackground(new java.awt.Color(0xE8EAF6)); // soft indigo tint
 
         // Title
         JLabel titleLabel = new JLabel("Profile Setup");

@@ -21,6 +21,7 @@ class FriendsPanel extends JPanel {
     FriendsPanel(Navigation navigation) {
         setLayout(new BorderLayout(10, 10));
         setBorder(new EmptyBorder(20, 20, 20, 20));
+        setBackground(new java.awt.Color(0xF3E5F5)); // light lavender
 
         JLabel titleLabel = new JLabel("Friends");
         titleLabel.setHorizontalAlignment(JLabel.CENTER);

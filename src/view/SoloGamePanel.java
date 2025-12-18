@@ -4,7 +4,8 @@ import controller.AppController;
 import controller.GameOutcomePresenter;
 import controller.TurnTimer;
 import view.OutcomeRenderer;
-import view.listeners.GameEventListener;
+import controller.events.GameEvent;
+import controller.events.GameEventListener;
 import view.listeners.GameStateListener;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
@@ -33,11 +34,11 @@ class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameStateListe
     private final GameOutcomePresenter outcomePresenter;
     private final TurnTimer timerController;
 
-    SoloGamePanel(Navigation navigation, AppController appController, TurnTimer timerController) {
+    SoloGamePanel(Navigation navigation, AppController appController) {
         this.navigation = navigation;
         this.appController = appController;
         this.outcomePresenter = new GameOutcomePresenter();
-        this.timerController = timerController;
+        this.timerController = navigation.getTimerController();
         this.player = new GamePlayer(new PlayerProfile("You", ""), true);
         
         appController.addGameStateListener(this);
@@ -45,6 +46,7 @@ class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameStateListe
         timerController.addListener(this);
 
         setLayout(new BorderLayout(8, 8));
+        setBackground(new java.awt.Color(0xEEF6F7)); // soft teal tint
         
         var topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.add(new JLabel("Solo Game"));
@@ -86,23 +88,27 @@ class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameStateListe
     }
 
     @Override
-    public void onGameStart(GameState initialState) {
-        grid.clearRows();
-        guessField.setText("");
-        guessField.setEnabled(true);
-        keyboardPanel.setEnabled(true);
-        setStatus("New game started. Make your guess!");
-        updateTimerLabel(playerTimerLabel, initialState.getConfig().timerDuration().seconds());
-    }
-
-    @Override
     public void onGameStateUpdate(GameState newState) {
         // Passive updates only: timers, labels, enabling/disabling handled elsewhere.
     }
 
     @Override
-    public void onGameOver(GameState finalState) {
-        onGameFinished(finalState, null);
+    public void onGameEvent(GameEvent event) {
+        switch (event.kind()) {
+            case gameStarted -> {
+                grid.clearRows();
+                guessField.setText("");
+                guessField.setEnabled(true);
+                keyboardPanel.setEnabled(true);
+                setStatus("New game started. Make your guess!");
+                var init = event.snapshot();
+                if (init != null) {
+                    updateTimerLabel(playerTimerLabel, init.getConfig().timerDuration().seconds());
+                }
+            }
+            case gameFinished -> onGameFinished(event.snapshot(), null);
+            default -> { }
+        }
     }
     
     private void handleGuess() {
@@ -144,7 +150,8 @@ class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameStateListe
         if (vm.nextAction() == GameOutcomePresenter.NextAction.ASK_WINNER_KNOWLEDGE) {
             int choice = JOptionPane.showConfirmDialog(this, vm.message(), vm.title(), JOptionPane.YES_NO_OPTION);
             finalKnew = (choice == JOptionPane.YES_OPTION);
-            toShow = outcomePresenter.buildSolo(state, finalKnew);
+            appController.reportWinnerKnowledge(finalKnew);
+            toShow = outcomePresenter.buildSolo(appController.getGameState(), finalKnew);
         }
 
         if (toShow == null) {

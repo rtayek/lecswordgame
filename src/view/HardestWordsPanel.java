@@ -21,6 +21,7 @@ class HardestWordsPanel extends JPanel {
         this.appController = appController;
 
         setLayout(new BorderLayout(8, 8));
+        setBackground(new java.awt.Color(0xE8F5E9)); // light green
         
         JLabel titleLabel = new JLabel("Hardest Words");
         titleLabel.setHorizontalAlignment(JLabel.CENTER);

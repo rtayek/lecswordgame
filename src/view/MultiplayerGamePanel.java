@@ -4,7 +4,8 @@ import controller.AppController;
 import controller.GameOutcomePresenter;
 import controller.TurnTimer;
 import view.OutcomeRenderer;
-import view.listeners.GameEventListener;
+import controller.events.GameEvent;
+import controller.events.GameEventListener;
 import view.listeners.GameStateListener;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
@@ -43,10 +44,10 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
     private final JLabel statusLabel;
     private final JButton submitButton;
 
-    MultiplayerGamePanel(Navigation navigation, AppController appController, TurnTimer timerController) {
+    MultiplayerGamePanel(Navigation navigation, AppController appController) {
         this.navigation = navigation;
         this.appController = appController;
-        this.timerController = timerController;
+        this.timerController = navigation.getTimerController();
         this.outcomePresenter = new GameOutcomePresenter();
         
         appController.addGameStateListener(this);
@@ -54,6 +55,7 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
         timerController.addListener(this);
 
         setLayout(new BorderLayout(8, 8));
+        setBackground(new java.awt.Color(0xF4F1DE)); // warm beige
 
         currentPlayerLabel = new JLabel("Current player: (none)");
         add(currentPlayerLabel, BorderLayout.NORTH);
@@ -120,38 +122,40 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
     }
 
     @Override
-    public void onGameStart(GameState initialState) {
-        leftGrid.clearRows();
-        rightGrid.clearRows();
-        setStatus(" ");
-        guessField.setText("");
-        guessField.setEnabled(true);
-        keyboardPanel.setEnabled(true);
-        submitButton.setEnabled(true);
-
-        var p1 = initialState.getConfig().playerOne();
-        var p2 = initialState.getConfig().playerTwo();
-
-        var name1 = p1 != null && p1.profile() != null ? p1.profile().username() : "Player 1";
-        var name2 = p2 != null && p2.profile() != null ? p2.profile().username() : "Player 2";
-
-        playerOneLabel.setText(name1);
-        playerTwoLabel.setText(name2);
-        
-        updateTimerLabel(playerOneTimerLabel, initialState.getConfig().timerDuration().seconds());
-        updateTimerLabel(playerTwoTimerLabel, initialState.getConfig().timerDuration().seconds());
-
-        updateCurrentPlayerLabel(initialState);
-    }
-
-    @Override
     public void onGameStateUpdate(GameState newState) {
         updateCurrentPlayerLabel(newState);
     }
 
     @Override
-    public void onGameOver(GameState finalState) {
-        onGameEnd(finalState, null);
+    public void onGameEvent(GameEvent event) {
+        switch (event.kind()) {
+            case gameStarted -> {
+                leftGrid.clearRows();
+                rightGrid.clearRows();
+                setStatus(" ");
+                guessField.setText("");
+                guessField.setEnabled(true);
+                keyboardPanel.setEnabled(true);
+                submitButton.setEnabled(true);
+                var init = event.snapshot();
+                if (init != null) {
+                    updateTimerLabel(playerOneTimerLabel, init.getConfig().timerDuration().seconds());
+                    updateTimerLabel(playerTwoTimerLabel, init.getConfig().timerDuration().seconds());
+                    updateCurrentPlayerLabel(init);
+                }
+            }
+            case gameStateUpdated -> {
+                // No-op here; rows are added in handleGuess outcome
+                var state = event.snapshot();
+                if (state != null && state.getStatus() == model.enums.GameStatus.waitingForFinalGuess) {
+                    onGameEnd(state, null);
+                } else {
+                    updateCurrentPlayerLabel(state);
+                }
+            }
+            case gameFinished -> onGameEnd(event.snapshot(), null);
+            default -> { }
+        }
     }
 
     private void handleGuess() {
@@ -301,7 +305,8 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
         if (vm.nextAction() == GameOutcomePresenter.NextAction.ASK_WINNER_KNOWLEDGE) {
             int choice = JOptionPane.showConfirmDialog(this, vm.message(), vm.title(), JOptionPane.YES_NO_OPTION);
             finalWinnerKnew = (choice == JOptionPane.YES_OPTION);
-            toShow = outcomePresenter.buildMultiplayer(state, finalWinnerKnew);
+            appController.reportWinnerKnowledge(finalWinnerKnew);
+            toShow = outcomePresenter.buildMultiplayer(appController.getGameState(), finalWinnerKnew);
         }
 
         if (toShow == null) {

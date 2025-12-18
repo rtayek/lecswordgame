@@ -45,5 +45,7 @@ public interface Navigation {
 
 
     void showSoloGame();
+    
+    controller.TurnTimer getTimerController();
 
 }

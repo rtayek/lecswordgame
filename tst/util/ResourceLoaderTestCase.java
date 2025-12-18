@@ -2,7 +2,7 @@ package util;
 import java.awt.Image;
 import java.net.URL;
 import javax.swing.ImageIcon;
-public class Test {
+public class ResourceLoaderTestCase {
 	public static void main(String[] args) {
 		String path="app.png";
 		URL imageUrl=Thread.currentThread().getContextClassLoader().getResource(path);

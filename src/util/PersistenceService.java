@@ -17,9 +17,9 @@ import model.Records.HardWordEntry;
 
 public class PersistenceService {
 
-    private static final String PROFILE_FILE = "profile.properties";
-    private static final String GAME_LOG_FILE = "game_log.txt";
-    private static final String HARDEST_WORDS_FILE = "hardest_words.txt";
+    private static final String profileFile = "profile.properties";
+    private static final String gameLogFile = "game_log.txt";
+    private static final String hardeestWordFile = "hardest_words.txt";
 
     private final Path dataDirectory;
 
@@ -43,7 +43,7 @@ public class PersistenceService {
             properties.setProperty("username", profile.username());
             properties.setProperty("avatarPath", profile.avatarPath() != null ? profile.avatarPath() : "");
         }
-        try (OutputStream os = Files.newOutputStream(dataDirectory.resolve(PROFILE_FILE))) {
+        try (OutputStream os = Files.newOutputStream(dataDirectory.resolve(profileFile))) {
             properties.store(os, "Player Profile");
         } catch (IOException e) {
             System.err.println("Error saving player profile: " + e.getMessage());
@@ -52,7 +52,7 @@ public class PersistenceService {
 
     public PlayerProfile loadPlayerProfile() {
         Properties properties = new Properties();
-        Path profilePath = dataDirectory.resolve(PROFILE_FILE);
+        Path profilePath = dataDirectory.resolve(profileFile);
         if (Files.exists(profilePath)) {
             try (InputStream is = Files.newInputStream(profilePath)) {
                 properties.load(is);
@@ -68,7 +68,7 @@ public class PersistenceService {
 
     // --- Game Log Persistence ---
     public void saveGameLogs(List<GameLogEntry> logs) {
-        try (BufferedWriter writer = Files.newBufferedWriter(dataDirectory.resolve(GAME_LOG_FILE))) {
+        try (BufferedWriter writer = Files.newBufferedWriter(dataDirectory.resolve(gameLogFile))) {
             for (GameLogEntry entry : logs) {
                 writer.write(String.join(",",
                         entry.gameId(),
@@ -86,7 +86,7 @@ public class PersistenceService {
     }
 
     public List<GameLogEntry> loadGameLogs() {
-        Path logPath = dataDirectory.resolve(GAME_LOG_FILE);
+        Path logPath = dataDirectory.resolve(gameLogFile);
         if (Files.exists(logPath)) {
             try (BufferedReader reader = Files.newBufferedReader(logPath)) {
                 return reader.lines()
@@ -112,7 +112,7 @@ public class PersistenceService {
     // Note: HardWordEntry is currently an inner record of HardestWordsPanel.
     // For proper persistence, it should ideally be a top-level record or in model.Records.
     public void saveHardestWords(List<HardWordEntry> hardWords) {
-        try (BufferedWriter writer = Files.newBufferedWriter(dataDirectory.resolve(HARDEST_WORDS_FILE))) {
+        try (BufferedWriter writer = Files.newBufferedWriter(dataDirectory.resolve(hardeestWordFile))) {
             for (HardWordEntry entry : hardWords) {
                 writer.write(String.join(",",
                         String.valueOf(entry.rank()),
@@ -127,7 +127,7 @@ public class PersistenceService {
     }
 
     public List<HardWordEntry> loadHardestWords() {
-        Path hardWordsPath = dataDirectory.resolve(HARDEST_WORDS_FILE);
+        Path hardWordsPath = dataDirectory.resolve(hardeestWordFile);
         if (Files.exists(hardWordsPath)) {
             try (BufferedReader reader = Files.newBufferedReader(hardWordsPath)) {
                 return reader.lines()

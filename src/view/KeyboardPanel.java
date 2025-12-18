@@ -50,8 +50,21 @@ class KeyboardPanel extends JPanel {
 
     void updateKeyboard(GuessResult result, Difficulty difficulty) {
         String guess = result.guess().toUpperCase();
+        // Expert mode carries no per-letter feedback; just gray out used letters.
+        if (difficulty == Difficulty.expert) {
+            for (int i = 0; i < guess.length(); i++) {
+                char c = guess.charAt(i);
+                letterStates.put(c, LetterFeedback.notPresent); // mark as used/gray
+            }
+            applyStyles(difficulty);
+            return;
+        }
+
         for (int i = 0; i < guess.length(); i++) {
             char c = guess.charAt(i);
+            if (i >= result.feedback().size()) {
+                continue;
+            }
             LetterFeedback newFeedback = result.feedback().get(i);
             
             // Update letter state if new feedback is "better"

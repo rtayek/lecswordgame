@@ -9,8 +9,11 @@ import model.GameState.GameConfig;
 import model.Records.GamePlayer;
 import model.Records.GuessOutcome;
 import model.Records.WordChoice;
+import model.enums.WordLength;
 import controller.TurnTimer;
-import view.listeners.GameEventListener;
+import controller.events.GameEvent;
+import controller.events.GameEvent.GameEventKind;
+import controller.events.GameEventListener;
 import view.listeners.GameStateListener;
 
 /**
@@ -63,7 +66,7 @@ public class GameSessionService implements TurnTimer.Listener {
             turnTimer.reset();
         }
         stateListeners.forEach(l -> l.onGameStateUpdate(currentGameState));
-        eventListeners.forEach(l -> l.onGameStart(currentGameState));
+        publish(GameEventKind.gameStarted, null);
         return currentGameState;
     }
 
@@ -78,17 +81,13 @@ public class GameSessionService implements TurnTimer.Listener {
 
         // GameState is mutated in submitGuess; notify listeners with updated state.
         stateListeners.forEach(l -> l.onGameStateUpdate(currentGameState));
+        publish(GameEventKind.gameStateUpdated, outcome);
 
         if (newStatus == GameStatus.finished) {
-            eventListeners.forEach(l -> l.onGameOver(currentGameState));
-        }
-
-        if (currentGameState.getConfig().timerDuration().isTimed()) {
-            if (newStatus == GameStatus.finished) {
-                turnTimer.stop();
-            } else if (nextTurn != null && nextTurn != player) {
-                turnTimer.start(nextTurn);
-            }
+            publish(GameEventKind.gameFinished, outcome);
+            turnTimer.stop();
+        } else if (currentGameState.getConfig().timerDuration().isTimed() && nextTurn != null && nextTurn != player) {
+            turnTimer.start(nextTurn);
         }
         return outcome;
     }
@@ -96,6 +95,20 @@ public class GameSessionService implements TurnTimer.Listener {
     public void reset() {
         currentGameState = null;
         turnTimer.reset();
+    }
+
+    public String pickWord(WordLength length) {
+        return gameController.pickWord(length);
+    }
+
+    public boolean isValidWord(String word, WordLength length) {
+        return gameController.isValidWord(word, length);
+    }
+
+    public void applyWinnerKnowledge(boolean winnerKnewWord) {
+        if (currentGameState == null) return;
+        currentGameState.applyWinnerKnowledge(winnerKnewWord);
+        publish(GameEventKind.gameFinished, winnerKnewWord);
     }
 
     @Override
@@ -117,6 +130,14 @@ public class GameSessionService implements TurnTimer.Listener {
         currentGameState.handleTimeout(player);
         turnTimer.stop();
         stateListeners.forEach(l -> l.onGameStateUpdate(currentGameState));
-        eventListeners.forEach(l -> l.onGameOver(currentGameState));
+        publish(GameEventKind.timerExpired, player);
+        publish(GameEventKind.gameFinished, null);
+    }
+
+    private void publish(GameEventKind kind, Object metadata) {
+        var event = new GameEvent(kind, currentGameState, metadata);
+        for (GameEventListener l : eventListeners) {
+            l.onGameEvent(event);
+        }
     }
 }

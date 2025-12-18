@@ -21,9 +21,11 @@ class GameSetupPanel extends JPanel {
 
     GameSetupPanel(Navigation navigation, AppController appController) {
         setLayout(new BorderLayout(8, 8));
+        setBackground(new java.awt.Color(0xE3F2FD)); // light blue
         add(new JLabel("Game Setup"), BorderLayout.NORTH);
 
         var optionsPanel = new JPanel(new GridLayout(0, 1, 6, 6)); // Main panel for all options
+        optionsPanel.setOpaque(false);
 
         // Word Length Selection
         JPanel wordLengthPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));

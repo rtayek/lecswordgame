@@ -1,7 +1,6 @@
 package view;
 
 import controller.AppController;
-import controller.GameController;
 import controller.WordSelectionModel;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -26,7 +25,6 @@ import util.ResourceLoader; // Added: Import ResourceLoader
 class WordSelectionPanel extends JPanel {
 
     private final AppController appController;
-    private final GameController gameController;
     private GameConfig gameConfig;
     private GamePlayer currentPlayer;
     private GamePlayer opponentPlayer;
@@ -39,9 +37,8 @@ class WordSelectionPanel extends JPanel {
     private JButton rollTheDiceButton;
     private JButton confirmWordButton;
 
-    WordSelectionPanel(AppController appController, GameController gameController, GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, boolean isPlayerOneTurn) {
+    WordSelectionPanel(AppController appController, GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, boolean isPlayerOneTurn) {
         this.appController = appController;
-        this.gameController = gameController;
         setContext(config, playerOne, playerTwo, isPlayerOneTurn);
 
         setLayout(new BorderLayout(10, 10));
@@ -112,7 +109,7 @@ class WordSelectionPanel extends JPanel {
     }
 
     private void rollTheDice() {
-        String chosenWord = gameController.pickWord(gameConfig.wordLength()).toUpperCase();
+        String chosenWord = appController.pickWord(gameConfig.wordLength()).toUpperCase();
         selectionModel.recordRoll(chosenWord);
         wordInput.setText(chosenWord);
     }
@@ -131,7 +128,7 @@ class WordSelectionPanel extends JPanel {
             wordLengthHint.setText("Word must be %d letters long.".formatted(gameConfig.wordLength().length()));
             return;
         }
-        if (!gameController.isValidWord(chosenWord, gameConfig.wordLength())) {
+        if (!appController.isValidWord(chosenWord, gameConfig.wordLength())) {
              wordLengthHint.setText("'%s' is not a valid word.".formatted(chosenWord));
              return;
         }

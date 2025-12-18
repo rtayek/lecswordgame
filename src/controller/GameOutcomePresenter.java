@@ -54,7 +54,7 @@ public class GameOutcomePresenter {
         GamePlayer playerTwo = state.getConfig().playerTwo();
 
         if (winner == null) {
-            return new OutcomeViewModel("Game Result", "It's a Tie! Both players guessed the word.", "tie.png", SoundEffect.TIE, NextAction.NONE);
+            return new OutcomeViewModel("Game Result", "It's a Tie! Both players guessed the word.", "tie.png", SoundEffect.tie, NextAction.NONE);
         }
 
         // Winner exists
@@ -68,15 +68,15 @@ public class GameOutcomePresenter {
 
         if (!winnerKnewWord) {
             String msg = String.format("Congratulations, %s! You won because you didn't know the word!", name(winner));
-            return new OutcomeViewModel(winnerTitle(winner), msg, "win.png", SoundEffect.WIN, NextAction.NONE);
+            return new OutcomeViewModel(winnerTitle(winner), msg, "win.png", SoundEffect.win, NextAction.NONE);
         }
 
         if (opponentAlsoSucceeded) {
-            return new OutcomeViewModel("Game Result", "It's a Tie! Both of you knew your words.", "tie.png", SoundEffect.TIE, NextAction.NONE);
+            return new OutcomeViewModel("Game Result", "It's a Tie! Both of you knew your words.", "tie.png", SoundEffect.tie, NextAction.NONE);
         }
 
         String msg = String.format("Congratulations, %s! You won!", name(winner));
-        return new OutcomeViewModel(winnerTitle(winner), msg, "win.png", SoundEffect.WIN, NextAction.NONE);
+        return new OutcomeViewModel(winnerTitle(winner), msg, "win.png", SoundEffect.win, NextAction.NONE);
     }
 
     /**
@@ -95,15 +95,15 @@ public class GameOutcomePresenter {
                 return new OutcomeViewModel("Win Condition", "You guessed the word! Did you know this word?", null, null, NextAction.ASK_WINNER_KNOWLEDGE);
             }
             if (!playerKnewWord) {
-                return new OutcomeViewModel("You Win!", "Congratulations! You won because you didn't know the word!", "win.png", SoundEffect.WIN, NextAction.NONE);
+                return new OutcomeViewModel("You Win!", "Congratulations! You won because you didn't know the word!", "win.png", SoundEffect.win, NextAction.NONE);
             }
-            return new OutcomeViewModel("You Win!", "Congratulations! You won!", "win.png", SoundEffect.WIN, NextAction.NONE);
+            return new OutcomeViewModel("You Win!", "Congratulations! You won!", "win.png", SoundEffect.win, NextAction.NONE);
         }
 
         // Player lost; show target word
         String targetWord = state.wordFor(state.getConfig().playerOne()).word();
         String msg = "Game Over! The word was: " + targetWord + ". You lost!";
-        return new OutcomeViewModel("You Lose!", msg, "lose.png", SoundEffect.LOSE, NextAction.NONE);
+        return new OutcomeViewModel("You Lose!", msg, "lose.png", SoundEffect.lose, NextAction.NONE);
     }
 
     private String name(GamePlayer player) {
