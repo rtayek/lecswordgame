@@ -4,15 +4,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import model.Records.GamePlayer;
+import model.Records.GuessEntry;
+import model.Records.WordChoice;
 import model.enums.Difficulty;
 import model.enums.FinishState;
 import model.enums.GameMode;
 import model.enums.GameStatus;
 import model.enums.TimerDuration;
 import model.enums.WordLength;
-import model.Records.GamePlayer;
-import model.Records.GuessEntry;
-import model.Records.WordChoice;
 import model.Records.GuessResult;
 
 /**

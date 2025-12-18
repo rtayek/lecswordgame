@@ -8,10 +8,10 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import model.enums.*;
 import model.GameState.GameConfig;
 import model.Records.GamePlayer;
 import model.Records.PlayerProfile;
+import model.enums.*;
 
 class GameSetupPanel extends JPanel {
 

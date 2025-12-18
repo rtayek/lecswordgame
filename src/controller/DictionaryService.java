@@ -9,10 +9,9 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-
-import model.enums.WordLength;
 import util.Constants; // Correctly placed import
 import controller.WordService;
+import model.enums.WordLength;
 
 /**
  * A service responsible for providing words from a dictionary.

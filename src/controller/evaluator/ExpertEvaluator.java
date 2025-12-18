@@ -2,7 +2,6 @@ package controller.evaluator;
 
 import model.Records.GuessResult;
 import model.enums.LetterFeedback;
-
 import java.util.ArrayList;
 
 /**

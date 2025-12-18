@@ -47,8 +47,8 @@ public class NavigationCoordinator {
         if (navigation != null) navigation.showGameSetup();
     }
 
-    public void showWordSelection(GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, boolean isPlayerOneTurn) {
-        if (navigation != null) navigation.showWordSelection(config, playerOne, playerTwo, isPlayerOneTurn);
+    public void showWordSelection(WordSelectionViewData data) {
+        if (navigation != null) navigation.showWordSelection(data);
     }
 
     public void showMultiplayerGame() {

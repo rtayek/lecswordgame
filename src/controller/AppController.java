@@ -50,7 +50,7 @@ public class AppController {
 
     public void requestNewGame(GameConfig config) {
         wordSelectionFlow.start(config);
-        navigationCoordinator.showWordSelection(config, config.playerOne(), config.playerTwo(), true);
+        navigationCoordinator.showWordSelection(buildWordSelectionData(config, true));
     }
     
     public void playerOneWordSelected(WordChoice wordChoice) {
@@ -59,7 +59,7 @@ public class AppController {
             startGame(startRequest.config(), startRequest.playerOne(), startRequest.playerTwo(), startRequest.playerOneWord(), startRequest.playerTwoWord());
         } else {
             var cfg = wordSelectionFlow.getPendingConfig();
-            navigationCoordinator.showWordSelection(cfg, wordSelectionFlow.getPendingPlayerOne(), wordSelectionFlow.getPendingPlayerTwo(), false);
+            navigationCoordinator.showWordSelection(buildWordSelectionData(cfg, false));
         }
     }
 
@@ -121,5 +121,13 @@ public class AppController {
 
     public TurnTimer getTurnTimer() {
         return turnTimer;
+    }
+
+    public WordSelectionViewData buildWordSelectionData(GameConfig config, boolean isPlayerOneTurn) {
+        if (config == null) return null;
+        var opponent = isPlayerOneTurn ? config.playerTwo() : config.playerOne();
+        var name = opponent != null && opponent.profile() != null ? opponent.profile().username() : "Player";
+        boolean isMultiplayer = config.mode() == GameMode.multiplayer;
+        return new WordSelectionViewData(name, config.wordLength().length(), isMultiplayer, isPlayerOneTurn);
     }
 }

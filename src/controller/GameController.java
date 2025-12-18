@@ -1,16 +1,15 @@
 package controller;
 
-import model.enums.Difficulty;
-import model.enums.GameStatus;
 import model.GameState;
 import model.GameState.GameConfig;
 import model.Records.GamePlayer;
 import model.Records.GuessEntry;
 import model.Records.GuessResult;
 import model.Records.WordChoice;
-
-import model.Records.GuessOutcome;
+import model.enums.Difficulty;
+import model.enums.GameStatus;
 import model.enums.WordLength;
+import model.Records.GuessOutcome;
 import controller.evaluator.ExpertEvaluator;
 import controller.evaluator.GuessEvaluator;
 import controller.evaluator.HardEvaluator;

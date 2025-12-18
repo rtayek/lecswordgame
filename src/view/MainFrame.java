@@ -2,9 +2,7 @@ package view;
 
 import controller.AppController;
 import model.GameState;
-import model.GameState.GameConfig;
-import model.Records.GamePlayer;
-import model.Records.WordChoice;
+import controller.WordSelectionViewData;
 
 import javax.swing.JFrame; // Missing Import
 import javax.swing.JPanel; // Missing Import
@@ -48,12 +46,12 @@ class MainFrame extends JFrame implements Navigation {
     }
 
     @Override
-    public void showWordSelection(GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, boolean isPlayerOneTurn) {
+    public void showWordSelection(controller.WordSelectionViewData data) {
         if (wordSelectionPanel == null) {
-            wordSelectionPanel = new WordSelectionPanel(appController, config, playerOne, playerTwo, isPlayerOneTurn);
+            wordSelectionPanel = new WordSelectionPanel(appController, data);
             cards.add(wordSelectionPanel, cardWordSelection);
         } else {
-            wordSelectionPanel.setContext(config, playerOne, playerTwo, isPlayerOneTurn);
+            wordSelectionPanel.setContext(data);
         }
         layout.show(cards, cardWordSelection);
     }

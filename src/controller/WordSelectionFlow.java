@@ -1,9 +1,9 @@
 package controller;
 
-import model.enums.GameMode;
 import model.GameState.GameConfig;
 import model.Records.GamePlayer;
 import model.Records.WordChoice;
+import model.enums.GameMode;
 
 /**
  * Manages the pre-game word selection flow and yields a start request when ready.

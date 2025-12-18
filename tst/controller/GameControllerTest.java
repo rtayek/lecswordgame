@@ -2,16 +2,16 @@ package controller;
 
 import controller.DictionaryService;
 import controller.GameController;
+import model.GameState;
+import model.Records.GamePlayer;
+import model.Records.PlayerProfile;
+import model.Records.WordChoice;
 import model.enums.Difficulty;
 import model.enums.GameMode;
 import model.enums.GameStatus;
 import model.enums.TimerDuration;
 import model.enums.WordLength;
 import model.enums.WordSource;
-import model.GameState;
-import model.Records.GamePlayer;
-import model.Records.PlayerProfile;
-import model.Records.WordChoice;
 
 /**
  * Minimal smoke tests for GameController submitGuess logic.

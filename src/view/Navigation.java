@@ -2,9 +2,7 @@ package view;
 
 import controller.TimerController;
 import model.GameState;
-import model.GameState.GameConfig;
-import model.Records.GamePlayer;
-import model.Records.WordChoice;
+import controller.WordSelectionViewData;
 
 public interface Navigation {
 
@@ -36,7 +34,7 @@ public interface Navigation {
 
 
 
-    void showWordSelection(GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, boolean isPlayerOneTurn);
+    void showWordSelection(WordSelectionViewData data);
 
 
 

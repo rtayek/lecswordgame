@@ -14,19 +14,14 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-import model.enums.Difficulty;
 import model.Records.GamePlayer;
 import model.Records.PlayerProfile;
+import model.enums.Difficulty;
+import model.enums.GameStatus;
 import model.GameState;
 
 import java.awt.Color;
 import javax.swing.JOptionPane;
-// import java.net.URL; // Removed: ResourceLoader handles URL
-// import java.awt.Image; // Removed: no longer needed for manual scaling
-// import java.awt.image.BufferedImage; // Removed: no longer needed for manual scaling
-// import java.awt.Graphics2D; // Removed: no longer needed for manual scaling
-// import java.awt.RenderingHints; // Removed: no longer needed for manual scaling
-import model.enums.GameStatus;
 
 class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameStateListener, GameEventListener {
 

@@ -5,14 +5,13 @@ import controller.GameController;
 import controller.GameSessionService;
 import controller.TurnTimer;
 import model.GameState;
+import model.Records.GamePlayer;
+import model.Records.PlayerProfile;
+import model.Records.WordChoice;
 import model.enums.Difficulty;
 import model.enums.GameMode;
 import model.enums.TimerDuration;
 import model.enums.WordLength;
-import model.Records.GamePlayer;
-import model.Records.PlayerProfile;
-import model.Records.WordChoice;
-
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class GameSessionServiceTest {

@@ -1,9 +1,9 @@
 package controller;
 
-import model.enums.FinishState;
-import model.enums.GameStatus;
 import model.GameState;
 import model.Records.GamePlayer;
+import model.enums.FinishState;
+import model.enums.GameStatus;
 import util.SoundEffect;
 
 /**

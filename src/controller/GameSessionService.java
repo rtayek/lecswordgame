@@ -2,13 +2,13 @@ package controller;
 
 import java.util.ArrayList;
 import java.util.List;
-import model.enums.GameMode;
-import model.enums.GameStatus;
 import model.GameState;
 import model.GameState.GameConfig;
 import model.Records.GamePlayer;
 import model.Records.GuessOutcome;
 import model.Records.WordChoice;
+import model.enums.GameMode;
+import model.enums.GameStatus;
 import model.enums.WordLength;
 import controller.TurnTimer;
 import controller.events.GameEvent;

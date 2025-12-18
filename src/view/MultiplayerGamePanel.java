@@ -14,17 +14,11 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-import model.Records.GamePlayer;
-import model.enums.*;
 import model.GameState;
-
+import model.enums.*;
 import java.awt.Color;
 import javax.swing.JOptionPane;
 import javax.swing.ImageIcon;
-import model.GameState.GameConfig;
-import model.Records.WordChoice;
-import model.enums.FinishState;
-import model.enums.GameMode;
 
 class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameStateListener, GameEventListener {
 
@@ -247,7 +241,7 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
     }
 
     @Override
-    public void onTimeUpdated(GamePlayer player, int remainingSeconds) {
+    public void onTimeUpdated(model.Records.GamePlayer player, int remainingSeconds) {
         var state = appController.getGameState();
         if (state == null) return;
         
@@ -256,7 +250,7 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
     }
 
     @Override
-    public void onTimeExpired(GamePlayer player) {
+    public void onTimeExpired(model.Records.GamePlayer player) {
         var state = appController.getGameState();
         if (state == null) return;
 
