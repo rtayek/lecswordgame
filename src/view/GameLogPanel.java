@@ -10,8 +10,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
 import model.Records.GameLogEntry;
-import model.Enums.Difficulty;
-import model.Enums.WordLength;
 
 class GameLogPanel extends JPanel {
 

@@ -11,7 +11,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import model.Enums.Difficulty;
 import model.Records.GamePlayer;
-import model.Records.GuessResult;
 import model.Records.PlayerProfile;
 import model.GameState;
 
@@ -24,7 +23,6 @@ import javax.swing.ImageIcon;
 // import java.awt.Graphics2D; // Removed: no longer needed for manual scaling
 // import java.awt.RenderingHints; // Removed: no longer needed for manual scaling
 import model.Enums.GameStatus;
-import util.Constants;
 import util.ResourceLoader; // Import ResourceLoader
 import util.SoundEffect;
 
@@ -118,6 +116,10 @@ class SoloGamePanel extends JPanel implements TimerController.Listener {
     }
     
     private void onGameFinished(GameState state) {
+        // Disable input elements when the game is finished
+        guessField.setEnabled(false);
+        keyboardPanel.setEnabled(false);
+
         boolean playerWon = (state.getWinner() != null && state.getWinner().equals(player));
         String message;
         SoundEffect soundEffect;

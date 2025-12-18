@@ -2,6 +2,7 @@ package model;
 
 import java.util.List;
 import model.Enums.Difficulty;
+import model.Enums.GameStatus;
 import model.Enums.LetterFeedback;
 import model.Enums.WordLength;
 import model.Enums.WordSource;
@@ -51,4 +52,6 @@ public final class Records {
     public static record GuessEntry(GamePlayer player, GuessResult result, long timestampMillis) { }
 
     public static record HardWordEntry(int rank, String word, double hardnessScore) { }
+
+    public static record GuessOutcome(GuessEntry entry, GameStatus status, GamePlayer nextTurn) { }
 }

@@ -17,7 +17,6 @@ import model.Enums.WordSource;
 import model.GameState.GameConfig;
 import model.Records.GamePlayer;
 import model.Records.WordChoice;
-import util.Constants;
 import util.ResourceLoader; // Added: Import ResourceLoader
 
 class WordSelectionPanel extends JPanel {

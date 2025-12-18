@@ -13,19 +13,15 @@ import model.Records.GamePlayer;
 import model.Enums.*;
 import model.GameState;
 
-import java.awt.Color; // Missing Import
-import javax.swing.JOptionPane; // Missing Import
-import javax.swing.ImageIcon; // Missing Import
-import java.net.URL; // Missing Import
-import java.awt.Image; // Missing Import
-import java.awt.image.BufferedImage; // Missing Import
-import java.awt.Graphics2D; // Missing Import
-import java.awt.RenderingHints; // Missing Import
-import model.GameState.GameConfig; // Missing Import
-import model.Records.WordChoice; // Missing Import
-import model.Enums.FinishState; // Missing Import
-import model.Enums.GameMode; // Missing Import
-import util.Constants; // Add import
+import java.awt.Color;
+import javax.swing.JOptionPane;
+import javax.swing.ImageIcon;
+import model.GameState.GameConfig;
+import model.Records.WordChoice;
+import model.Enums.FinishState;
+import model.Enums.GameMode;
+import util.SoundEffect;
+import util.ResourceLoader;
 
 class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
 
@@ -127,13 +123,14 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
 
         guessField.setText("");
         setStatus(" ");
-
-        updateCurrentPlayerLabel();
+        
+        updateCurrentPlayerLabel(state); // Update with state from outcome
 
         var finished = state.getStatus() == GameStatus.finished;
         submitButton.setEnabled(!finished);
         guessField.setEnabled(!finished);
-        
+        keyboardPanel.setEnabled(!finished); // Also disable keyboard
+
         if (state.getStatus() == GameStatus.finished || state.getStatus() == GameStatus.waitingForFinalGuess) {
             onGameEnd(state);
         }
@@ -150,11 +147,12 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
         statusLabel.setText(text);
     }
 
-    private void updateCurrentPlayerLabel() {
-        var state = navigation.getGameState();
+    private void updateCurrentPlayerLabel(GameState state) {
         if (state == null) {
             currentPlayerLabel.setText("Current player: (none)");
             submitButton.setEnabled(false);
+            guessField.setEnabled(false); // Also disable guess field
+            keyboardPanel.setEnabled(false); // Also disable keyboard
             return;
         }
 
@@ -170,6 +168,8 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
                 currentPlayerLabel.setText(name + " wins!");
             }
             submitButton.setEnabled(false);
+            guessField.setEnabled(false);
+            keyboardPanel.setEnabled(false);
             return;
         }
 
@@ -177,6 +177,8 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
         if (player == null || player.profile() == null) {
             currentPlayerLabel.setText("Current player: (none)");
             submitButton.setEnabled(false);
+            guessField.setEnabled(false); // Also disable guess field
+            keyboardPanel.setEnabled(false); // Also disable keyboard
             return;
         }
 
@@ -187,6 +189,8 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
 
         currentPlayerLabel.setText("Current player: " + name);
         submitButton.setEnabled(true);
+        guessField.setEnabled(true); // Re-enable if game is not finished
+        keyboardPanel.setEnabled(true); // Re-enable if game is not finished
     }
 
     void onShow() {
@@ -224,7 +228,7 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
             updateTimerLabel(playerTwoTimerLabel, 0);
         }
 
-        updateCurrentPlayerLabel();
+        updateCurrentPlayerLabel(state);
     }
 
     @Override
@@ -298,26 +302,27 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
             );
             submitButton.setEnabled(true);
             guessField.setEnabled(true);
+            keyboardPanel.setEnabled(true); // Re-enable keyboard
             // The turn has already been switched by GameState.applyGuessResult
-            updateCurrentPlayerLabel();
+            updateCurrentPlayerLabel(state); // Pass state
             return;
         }
 
         // GameStatus is finished
         String message;
-        String soundFile;
+        SoundEffect soundEffect;
         String graphicFile;
         GamePlayer winner = state.getWinner();
         GamePlayer playerOne = state.getConfig().playerOne();
         GamePlayer playerTwo = state.getConfig().playerTwo();
 
         if (winner == null) { // Tie
-            soundFile = Constants.RESOURCES_PATH + "tie.wav"; // Assuming tie sound
-            graphicFile = Constants.RESOURCES_PATH + "tie_graphic.png"; // Assuming tie graphic
+            soundEffect = SoundEffect.TIE;
+            graphicFile = "tie.png"; // Assuming tie graphic
             message = "It's a Tie! Both players guessed the word.";
         } else if (winner.equals(playerOne) || winner.equals(playerTwo)) { // A player won
-            soundFile = Constants.RESOURCES_PATH + "win.wav";
-            graphicFile = Constants.RESOURCES_PATH + "win_graphic.png";
+            soundEffect = SoundEffect.WIN;
+            graphicFile = "win.png";
             
             GamePlayer winningPlayer = winner;
             GamePlayer losingPlayer = (winner.equals(playerOne)) ? playerTwo : playerOne;
@@ -336,8 +341,8 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
             } else {
                 // If winner knew, and opponent also guessed their word, it's a tie
                 if (state.getPlayerFinishState(losingPlayer) == FinishState.FINISHED_SUCCESS) {
-                    soundFile = "/main/resources/tie.wav";
-                    graphicFile = "/main/resources/tie_graphic.png";
+                    soundEffect = SoundEffect.TIE;
+                    graphicFile = "tie.png";
                     winner = null; // Mark as tie
                     message = "It's a Tie! Both of you knew your words.";
                 } else {
@@ -345,8 +350,8 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
                 }
             }
         } else { // Someone lost, and didn't guess their word on last chance
-            soundFile = "/main/resources/lose.wav";
-            graphicFile = "/main/resources/lose_graphic.png";
+            soundEffect = SoundEffect.LOSE;
+            graphicFile = "lose.png";
             GamePlayer loser = state.getOpponent(winner); // The one who failed the last guess
             String targetWord = state.wordFor(loser).word();
             message = "Game Over for %s! The word was: %s. %s wins!".formatted(
@@ -386,30 +391,20 @@ class MultiplayerGamePanel extends JPanel implements TimerController.Listener {
         }
         
         // Play sound
-        util.AudioPlayer.playSound(getClass().getResource(soundFile).getPath());
+        ResourceLoader.playSound(soundEffect);
 
         // Display graphic
+        ImageIcon graphic = ResourceLoader.getImageIcon(graphicFile, 100, 100).orElse(null);
         JOptionPane.showMessageDialog(
             this,
             message,
             (winner != null) ? (winner.profile().username() + " Wins!") : "Game Result",
             JOptionPane.INFORMATION_MESSAGE,
-            getGraphicIcon(graphicFile)
+            graphic
         );
 
         // Optionally navigate back to setup or landing
         navigation.showGameSetup(); // Or showLanding()
-    }
-
-    // Helper to get a scaled graphic icon
-    private ImageIcon getGraphicIcon(String path) {
-        URL imageUrl = getClass().getResource(path);
-        if (imageUrl != null) {
-            ImageIcon originalIcon = new ImageIcon(imageUrl);
-            Image scaledImage = originalIcon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH); // Scale for dialog
-            return new ImageIcon(scaledImage);
-        }
-        return null; // No graphic
     }
 
     private static final long serialVersionUID = 1L;

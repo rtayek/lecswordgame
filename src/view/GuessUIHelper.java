@@ -1,5 +1,6 @@
 package view;
 
+import model.Records.GuessOutcome;
 import controller.GameController;
 import java.util.function.Function;
 import model.Enums.GameStatus;
@@ -32,32 +33,14 @@ final class GuessUIHelper {
             return Outcome.error("No current player.");
         }
 
-        var wordLength = state.getConfig().wordLength();
-        String guess = normalizeGuess(rawGuess);
-        if (guess.isEmpty()) {
-            return Outcome.error("Enter a guess first.");
-        }
-        if (wordLength != null && guess.length() != wordLength.length()) {
-            return Outcome.error("Guess must be " + wordLength.length() + " letters.");
-        }
-
         try {
-            GameState updatedState = controller.submitGuess(state, player, guess);
-            var guesses = updatedState.getGuesses();
-            if (guesses.isEmpty()) {
-                return Outcome.error("No guesses recorded.");
-            }
-            GuessResult result = guesses.get(guesses.size() - 1).result();
-            navigation.setGameState(updatedState);
-            return Outcome.success(updatedState, result, player);
+            GuessOutcome outcome = controller.submitGuess(state, player, rawGuess); // Pass rawGuess directly
+            GuessResult result = outcome.entry().result();
+            navigation.setGameState(state); // state was modified in place by submitGuess
+            return Outcome.success(state, result, player);
         } catch (RuntimeException ex) {
             return Outcome.error(ex.getMessage());
         }
-    }
-
-    private static String normalizeGuess(String raw) {
-        var upper = raw == null ? "" : raw.trim().toUpperCase();
-        return upper.replaceAll("[^A-Z]", "");
     }
 
     static final class Outcome {

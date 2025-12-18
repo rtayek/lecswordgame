@@ -11,6 +11,7 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 public class AudioPlayer {
 
     public static void playSound(String soundFilePath) {
+    	if(soundFilePath!=null)
         try {
             AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(new File(soundFilePath).getAbsoluteFile());
             Clip clip = AudioSystem.getClip();
@@ -18,7 +19,7 @@ public class AudioPlayer {
             clip.start();
         } catch (UnsupportedAudioFileException | IOException | LineUnavailableException e) {
             System.err.println("Error playing sound file " + soundFilePath + ": " + e.getMessage());
-        }
+        } else System.out.println("soundFilePath is null in playSound()");
     }
 
     private AudioPlayer() {

@@ -15,7 +15,6 @@ import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import model.Records.PlayerProfile;
-import util.Constants;
 import util.ResourceLoader; // Import ResourceLoader
 
 class ProfileSetupPanel extends JPanel {

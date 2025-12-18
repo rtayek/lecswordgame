@@ -14,7 +14,6 @@ interface Navigation {
     TimerController getTimerController();
 
     void showLanding();
-//...
 
     void showProfileSetup();
 

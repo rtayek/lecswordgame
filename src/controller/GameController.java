@@ -12,6 +12,8 @@ import model.Records.GuessEntry;
 import model.Records.GuessResult;
 import model.Records.WordChoice;
 
+import model.Records.GuessOutcome;
+
 public class GameController {
 
     private final DictionaryService dictionaryService;
@@ -61,7 +63,7 @@ public class GameController {
         return dictionaryService.isValidWord(word, wordLength);
     }
 
-    public GameState submitGuess(GameState gameState, GamePlayer player, String rawGuess) {
+    public GuessOutcome submitGuess(GameState gameState, GamePlayer player, String rawGuess) {
         if (gameState == null) {
             throw new IllegalStateException("Start a new game first.");
         }
@@ -123,7 +125,7 @@ public class GameController {
                 timerController.start(newTurn);
             }
         }
-        return gameState;
+        return new GuessOutcome(entry, newStatus, newTurn);
     }
 
     private GuessResult evaluateNormal(String guess, String target) {
@@ -155,12 +157,13 @@ public class GameController {
         boolean exactMatch = true;
 
         for (EvaluatedLetter el : evaluatedLetters) {
-            if (el.type() == MatchResultType.CORRECT_POSITION || el.type() == MatchResultType.WRONG_POSITION) {
-                feedback.add(LetterFeedback.usedPresent); // Same feedback for correct/wrong position
+            if (el.type() == MatchResultType.CORRECT_POSITION) {
+                feedback.add(LetterFeedback.correctPosition);
                 correctLetterCount++;
-                if (el.type() == MatchResultType.WRONG_POSITION) {
-                    exactMatch = false;
-                }
+            } else if (el.type() == MatchResultType.WRONG_POSITION) {
+                feedback.add(LetterFeedback.wrongPosition);
+                correctLetterCount++;
+                exactMatch = false;
             } else {
                 feedback.add(LetterFeedback.notInWord);
                 exactMatch = false;
