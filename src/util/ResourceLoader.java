@@ -59,7 +59,7 @@ public final class ResourceLoader {
     }
 
     // Helper to scale image while maintaining aspect ratio
-    private static Image getScaledImage(Image srcImg, int w, int h) {
+    static Image getScaledImage(Image srcImg, int w, int h) {
         BufferedImage resizedImg = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2 = resizedImg.createGraphics();
 
