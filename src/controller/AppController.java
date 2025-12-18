@@ -6,9 +6,11 @@ import model.GameState;
 import model.GameState.GameConfig;
 import model.Records.GameLogEntry;
 import model.Records.GamePlayer;
+import model.Records.GuessOutcome;
 import model.Records.HardWordEntry;
 import model.Records.PlayerProfile;
 import model.Records.WordChoice;
+import model.enums.GameMode;
 import util.PersistenceService;
 import view.Navigation;
 import view.listeners.GameEventListener;
@@ -20,8 +22,6 @@ public class AppController {
     private final WordSelectionFlow wordSelectionFlow = new WordSelectionFlow();
     private final ProfileService profileService;
     private final NavigationCoordinator navigationCoordinator = new NavigationCoordinator();
-    private GameState currentGameState;
-    
     public AppController(PersistenceService persistenceService, GameController gameController, TurnTimer turnTimer) {
         this.gameSessionService = new GameSessionService(gameController, turnTimer);
         this.profileService = new ProfileService(persistenceService);
@@ -40,7 +40,7 @@ public class AppController {
     }
 
     public GameState getGameState() {
-        return currentGameState;
+        return gameSessionService.getCurrentGameState();
     }
 
     public void requestNewGame(GameConfig config) {
@@ -65,9 +65,8 @@ public class AppController {
 
     private void startGame(GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, WordChoice p1Word, WordChoice p2Word) {
         var state = gameSessionService.startNewGame(config, p1Word, p2Word);
-        this.currentGameState = state;
 
-        if (config.mode() == model.Enums.GameMode.multiplayer) {
+        if (config.mode() == GameMode.multiplayer) {
             navigationCoordinator.showMultiplayerGame();
         } else {
             navigationCoordinator.showSoloGame();
@@ -76,13 +75,11 @@ public class AppController {
         wordSelectionFlow.clear();
     }
     
-    public void submitGuess(String guess) {
-        if (currentGameState == null) {
-            return;
+    public GuessOutcome submitGuess(String guess) {
+        if (gameSessionService.getCurrentGameState() == null) {
+            throw new IllegalStateException("Start a new game first.");
         }
-        
-        gameSessionService.submitGuess(guess);
-        currentGameState = gameSessionService.getCurrentGameState();
+        return gameSessionService.submitGuess(guess);
     }
 
     public PlayerProfile getCurrentProfile() {

@@ -1,11 +1,11 @@
 package model;
 
 import java.util.List;
-import model.Enums.Difficulty;
-import model.Enums.GameStatus;
-import model.Enums.LetterFeedback;
-import model.Enums.WordLength;
-import model.Enums.WordSource;
+import model.enums.Difficulty;
+import model.enums.GameStatus;
+import model.enums.LetterFeedback;
+import model.enums.WordLength;
+import model.enums.WordSource;
 
 public final class Records {
     private Records() { }

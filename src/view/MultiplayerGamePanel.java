@@ -1,6 +1,7 @@
 package view;
 
 import controller.AppController;
+import controller.GameOutcomePresenter;
 import controller.TurnTimer;
 import view.listeners.GameEventListener;
 import view.listeners.GameStateListener;
@@ -12,7 +13,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import model.Records.GamePlayer;
-import model.Enums.*;
+import model.enums.*;
 import model.GameState;
 
 import java.awt.Color;
@@ -20,16 +21,15 @@ import javax.swing.JOptionPane;
 import javax.swing.ImageIcon;
 import model.GameState.GameConfig;
 import model.Records.WordChoice;
-import model.Enums.FinishState;
-import model.Enums.GameMode;
-import util.SoundEffect;
-import util.ResourceLoader;
+import model.enums.FinishState;
+import model.enums.GameMode;
 
 class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameStateListener, GameEventListener {
 
     private final AppController appController;
     private final Navigation navigation;
     private final TurnTimer timerController;
+    private final GameOutcomePresenter outcomePresenter;
     private final GuessGridPanel leftGrid;
     private final GuessGridPanel rightGrid;
     private final JLabel currentPlayerLabel;
@@ -46,6 +46,7 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
         this.navigation = navigation;
         this.appController = appController;
         this.timerController = timerController;
+        this.outcomePresenter = new GameOutcomePresenter();
         
         appController.addGameStateListener(this);
         appController.addGameEventListener(this);
@@ -161,13 +162,13 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
         updateCurrentPlayerLabel(newState);
 
         if (newState.getStatus() == GameStatus.waitingForFinalGuess) {
-            onGameEnd(newState);
+            onGameEnd(newState, null);
         }
     }
 
     @Override
     public void onGameOver(GameState finalState) {
-        onGameEnd(finalState);
+        onGameEnd(finalState, null);
     }
 
     private void handleGuess() {
@@ -282,21 +283,14 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
         label.setForeground(isTimerRed ? Color.RED : Color.BLACK);
     }
     
-    private void onGameEnd(GameState state) {
-        if (state.getStatus() == GameStatus.waitingForFinalGuess) {
-            GamePlayer lastGuesser = state.getOpponent(state.getCurrentTurn());
-            GamePlayer opponent = state.getCurrentTurn();
+    private void onGameEnd(GameState state, Boolean winnerKnewWord) {
+        var vm = outcomePresenter.buildMultiplayer(state, winnerKnewWord);
+        if (vm == null) {
+            return;
+        }
 
-            JOptionPane.showMessageDialog(
-                this,
-                String.format("%s guessed the word! %s, you get one last chance to guess %s's word.",
-                    lastGuesser.profile().username(),
-                    opponent.profile().username(),
-                    lastGuesser.profile().username()
-                ),
-                "Last Chance!",
-                JOptionPane.INFORMATION_MESSAGE
-            );
+        if (vm.nextAction() == GameOutcomePresenter.NextAction.SHOW_LAST_CHANCE) {
+            JOptionPane.showMessageDialog(this, vm.message(), vm.title(), JOptionPane.INFORMATION_MESSAGE);
             submitButton.setEnabled(true);
             guessField.setEnabled(true);
             keyboardPanel.setEnabled(true);
@@ -304,53 +298,19 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
             return;
         }
 
-        String message;
-        SoundEffect soundEffect;
-        String graphicFile;
-        GamePlayer winner = state.getWinner();
-        GamePlayer playerOne = state.getConfig().playerOne();
-        GamePlayer playerTwo = state.getConfig().playerTwo();
-
-        if (winner == null) {
-            soundEffect = SoundEffect.TIE;
-            graphicFile = "tie.png";
-            message = "It's a Tie! Both players guessed the word.";
-        } else {
-            soundEffect = SoundEffect.WIN;
-            graphicFile = "win.png";
-            GamePlayer winningPlayer = winner;
-            GamePlayer losingPlayer = (winner.equals(playerOne)) ? playerTwo : playerOne;
-            
-            int choice = JOptionPane.showConfirmDialog(
-                this,
-                String.format("%s, you guessed the word! Did you know this word?", winningPlayer.profile().username()),
-                "Win Condition",
-                JOptionPane.YES_NO_OPTION
-            );
-
-            if (choice == JOptionPane.NO_OPTION) {
-                message = String.format("Congratulations, %s! You won because you didn't know the word!", winningPlayer.profile().username());
-            } else {
-                if (state.getPlayerFinishState(losingPlayer) == FinishState.FINISHED_SUCCESS) {
-                    soundEffect = SoundEffect.TIE;
-                    graphicFile = "tie.png";
-                    winner = null;
-                    message = "It's a Tie! Both of you knew your words.";
-                } else {
-                    message = String.format("Congratulations, %s! You won!", winningPlayer.profile().username());
-                }
-            }
+        var toShow = vm;
+        Boolean finalWinnerKnew = winnerKnewWord;
+        if (vm.nextAction() == GameOutcomePresenter.NextAction.ASK_WINNER_KNOWLEDGE) {
+            int choice = JOptionPane.showConfirmDialog(this, vm.message(), vm.title(), JOptionPane.YES_NO_OPTION);
+            finalWinnerKnew = (choice == JOptionPane.YES_OPTION);
+            toShow = outcomePresenter.buildMultiplayer(state, finalWinnerKnew);
         }
-        
-        ResourceLoader.playSound(soundEffect);
-        ImageIcon graphic = ResourceLoader.getImageIcon(graphicFile, 100, 100).orElse(null);
-        JOptionPane.showMessageDialog(
-            this,
-            message,
-            (winner != null) ? (winner.profile().username() + " Wins!") : "Game Result",
-            JOptionPane.INFORMATION_MESSAGE,
-            graphic
-        );
+
+        if (toShow == null) {
+            return;
+        }
+
+        OutcomeRenderer.render(this, toShow);
         navigation.showGameSetup();
     }
 

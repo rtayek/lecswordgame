@@ -2,12 +2,12 @@ package controller;
 
 import controller.DictionaryService;
 import controller.GameController;
-import model.Enums.Difficulty;
-import model.Enums.GameMode;
-import model.Enums.GameStatus;
-import model.Enums.TimerDuration;
-import model.Enums.WordLength;
-import model.Enums.WordSource;
+import model.enums.Difficulty;
+import model.enums.GameMode;
+import model.enums.GameStatus;
+import model.enums.TimerDuration;
+import model.enums.WordLength;
+import model.enums.WordSource;
 import model.GameState;
 import model.Records.GamePlayer;
 import model.Records.PlayerProfile;

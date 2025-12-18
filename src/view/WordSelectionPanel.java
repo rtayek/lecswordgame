@@ -2,6 +2,7 @@ package view;
 
 import controller.AppController;
 import controller.GameController;
+import controller.WordSelectionModel;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -16,7 +17,7 @@ import javax.swing.JTextField;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.border.EmptyBorder;
-import model.Enums.WordSource;
+import model.enums.WordSource;
 import model.GameState.GameConfig;
 import model.Records.GamePlayer;
 import model.Records.WordChoice;
@@ -26,30 +27,27 @@ class WordSelectionPanel extends JPanel {
 
     private final AppController appController;
     private final GameController gameController;
-    private final GameConfig gameConfig;
-    private final GamePlayer currentPlayer;
-    private final GamePlayer opponentPlayer;
-    private final boolean isPlayerOneTurn;
-    private boolean rolledByDice = false;
-    private String lastRolledWord;
+    private GameConfig gameConfig;
+    private GamePlayer currentPlayer;
+    private GamePlayer opponentPlayer;
+    private boolean isPlayerOneTurn;
+    private final WordSelectionModel selectionModel = new WordSelectionModel();
 
     private JTextField wordInput;
     private JLabel wordLengthHint;
+    private JLabel titleLabel;
     private JButton rollTheDiceButton;
     private JButton confirmWordButton;
 
     WordSelectionPanel(AppController appController, GameController gameController, GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, boolean isPlayerOneTurn) {
         this.appController = appController;
         this.gameController = gameController;
-        this.gameConfig = config;
-        this.isPlayerOneTurn = isPlayerOneTurn;
-        this.currentPlayer = isPlayerOneTurn ? playerOne : playerTwo;
-        this.opponentPlayer = isPlayerOneTurn ? playerTwo : playerOne;
+        setContext(config, playerOne, playerTwo, isPlayerOneTurn);
 
         setLayout(new BorderLayout(10, 10));
         setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        JLabel titleLabel = new JLabel("Choose Word for " + opponentPlayer.profile().username());
+        titleLabel = new JLabel("Choose Word for " + opponentPlayer.profile().username());
         titleLabel.setHorizontalAlignment(JLabel.CENTER);
         add(titleLabel, BorderLayout.NORTH);
 
@@ -93,18 +91,34 @@ class WordSelectionPanel extends JPanel {
         add(confirmWordButton, BorderLayout.SOUTH);
     }
 
+    void setContext(GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, boolean isPlayerOneTurn) {
+        this.gameConfig = config;
+        this.isPlayerOneTurn = isPlayerOneTurn;
+        this.currentPlayer = isPlayerOneTurn ? playerOne : playerTwo;
+        this.opponentPlayer = isPlayerOneTurn ? playerTwo : playerOne;
+        selectionModel.clear();
+        if (titleLabel != null && opponentPlayer != null && opponentPlayer.profile() != null) {
+            titleLabel.setText("Choose Word for " + opponentPlayer.profile().username());
+        }
+        if (wordInput != null) {
+            wordInput.setText("");
+            if (gameConfig != null && gameConfig.wordLength() != null) {
+                wordInput.setColumns(gameConfig.wordLength().length());
+            }
+        }
+        if (wordLengthHint != null && gameConfig != null && gameConfig.wordLength() != null) {
+            wordLengthHint.setText("Word must be %d letters long.".formatted(gameConfig.wordLength().length()));
+        }
+    }
+
     private void rollTheDice() {
         String chosenWord = gameController.pickWord(gameConfig.wordLength()).toUpperCase();
+        selectionModel.recordRoll(chosenWord);
         wordInput.setText(chosenWord);
-        rolledByDice = true;
-        lastRolledWord = chosenWord;
     }
 
     private void handleWordInputChange() {
-        String current = wordInput.getText() == null ? "" : wordInput.getText().trim().toUpperCase();
-        if (!current.equals(lastRolledWord)) {
-            rolledByDice = false;
-        }
+        selectionModel.onInputChanged(wordInput.getText());
     }
 
     private void confirmWord() {
@@ -122,10 +136,8 @@ class WordSelectionPanel extends JPanel {
              return;
         }
 
-        boolean usedDice = rolledByDice && chosenWord.equalsIgnoreCase(lastRolledWord);
-        WordChoice wordChoice = new WordChoice(chosenWord, usedDice ? WordSource.rollTheDice : WordSource.manual);
-        rolledByDice = false; // reset for next time
-        lastRolledWord = null;
+        WordChoice wordChoice = selectionModel.buildChoice(chosenWord);
+        selectionModel.clear();
         
         // This is where we need to pass the word back to GameSetupPanel or start the game
         // For now, we navigate back, in a real scenario, this would trigger the next step of setup

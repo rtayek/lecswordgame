@@ -2,20 +2,21 @@ package controller;
 
 import java.util.ArrayList;
 import java.util.List;
-import model.Enums.GameMode;
-import model.Enums.GameStatus;
+import model.enums.GameMode;
+import model.enums.GameStatus;
 import model.GameState;
 import model.GameState.GameConfig;
 import model.Records.GamePlayer;
 import model.Records.GuessOutcome;
 import model.Records.WordChoice;
+import controller.TurnTimer;
 import view.listeners.GameEventListener;
 import view.listeners.GameStateListener;
 
 /**
  * Orchestrates the lifecycle of a single game session and fans out state/events.
  */
-public class GameSessionService {
+public class GameSessionService implements TurnTimer.Listener {
 
     private final GameController gameController;
     private final TurnTimer turnTimer;
@@ -27,6 +28,7 @@ public class GameSessionService {
     public GameSessionService(GameController gameController, TurnTimer turnTimer) {
         this.gameController = gameController;
         this.turnTimer = turnTimer;
+        this.turnTimer.addListener(this);
     }
 
     public void addStateListener(GameStateListener listener) {
@@ -94,5 +96,27 @@ public class GameSessionService {
     public void reset() {
         currentGameState = null;
         turnTimer.reset();
+    }
+
+    @Override
+    public void onTimeUpdated(GamePlayer player, int remainingSeconds) {
+        // Panels listen directly for UI updates; no domain action needed here.
+    }
+
+    @Override
+    public void onTimeExpired(GamePlayer player) {
+        if (currentGameState == null || player == null) {
+            return;
+        }
+        if (!currentGameState.getConfig().timerDuration().isTimed()) {
+            return;
+        }
+        if (currentGameState.getStatus() == GameStatus.finished) {
+            return;
+        }
+        currentGameState.handleTimeout(player);
+        turnTimer.stop();
+        stateListeners.forEach(l -> l.onGameStateUpdate(currentGameState));
+        eventListeners.forEach(l -> l.onGameOver(currentGameState));
     }
 }

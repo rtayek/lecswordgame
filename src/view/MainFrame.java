@@ -52,11 +52,12 @@ class MainFrame extends JFrame implements Navigation {
 
     @Override
     public void showWordSelection(GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, boolean isPlayerOneTurn) {
-        if (wordSelectionPanel != null) {
-            cards.remove(wordSelectionPanel);
+        if (wordSelectionPanel == null) {
+            wordSelectionPanel = new WordSelectionPanel(appController, gameController, config, playerOne, playerTwo, isPlayerOneTurn);
+            cards.add(wordSelectionPanel, cardWordSelection);
+        } else {
+            wordSelectionPanel.setContext(config, playerOne, playerTwo, isPlayerOneTurn);
         }
-        wordSelectionPanel = new WordSelectionPanel(appController, gameController, config, playerOne, playerTwo, isPlayerOneTurn);
-        cards.add(wordSelectionPanel, cardWordSelection);
         layout.show(cards, cardWordSelection);
     }
     

@@ -2,9 +2,9 @@ package controller;
 
 import java.util.ArrayList;
 import java.util.List;
-import model.Enums.Difficulty;
-import model.Enums.LetterFeedback;
-import model.Enums.GameStatus;
+import model.enums.Difficulty;
+import model.enums.LetterFeedback;
+import model.enums.GameStatus;
 import model.GameState;
 import model.GameState.GameConfig;
 import model.Records.GamePlayer;
@@ -13,6 +13,7 @@ import model.Records.GuessResult;
 import model.Records.WordChoice;
 
 import model.Records.GuessOutcome;
+import model.enums.WordLength;
 
 public class GameController {
 
@@ -26,23 +27,23 @@ public class GameController {
         var gameState = new GameState(config);
 
         WordChoice actualPlayerOneWord = playerOneWord;
-        if (playerOneWord != null && playerOneWord.source() == model.Enums.WordSource.rollTheDice) {
-            actualPlayerOneWord = new WordChoice(dictionaryService.pickWord(config.wordLength()), model.Enums.WordSource.rollTheDice);
+        if (playerOneWord != null && playerOneWord.source() == model.enums.WordSource.rollTheDice) {
+            actualPlayerOneWord = new WordChoice(dictionaryService.pickWord(config.wordLength()), model.enums.WordSource.rollTheDice);
         }
 
         WordChoice actualPlayerTwoWord = playerTwoWord;
-        if (playerTwoWord != null && playerTwoWord.source() == model.Enums.WordSource.rollTheDice) {
-            actualPlayerTwoWord = new WordChoice(dictionaryService.pickWord(config.wordLength()), model.Enums.WordSource.rollTheDice);
+        if (playerTwoWord != null && playerTwoWord.source() == model.enums.WordSource.rollTheDice) {
+            actualPlayerTwoWord = new WordChoice(dictionaryService.pickWord(config.wordLength()), model.enums.WordSource.rollTheDice);
         }
-        gameState.initializeForPlay(actualPlayerOneWord, actualPlayerTwoWord);
+        gameState.startWithChosenWords(config, actualPlayerOneWord, actualPlayerTwoWord);
         return gameState;
     }
 
-    public String pickWord(model.Enums.WordLength wordLength) {
+    public String pickWord(WordLength wordLength) {
         return dictionaryService.pickWord(wordLength);
     }
 
-    public boolean isValidWord(String word, model.Enums.WordLength wordLength) {
+    public boolean isValidWord(String word, WordLength wordLength) {
         return dictionaryService.isValidWord(word, wordLength);
     }
 

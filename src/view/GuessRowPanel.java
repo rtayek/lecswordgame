@@ -6,8 +6,8 @@ import java.awt.Font;
 import java.awt.GridLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import model.Enums.Difficulty;
-import model.Enums.LetterFeedback;
+import model.enums.Difficulty;
+import model.enums.LetterFeedback;
 import model.Records.GuessResult;
 
 class GuessRowPanel extends JPanel {

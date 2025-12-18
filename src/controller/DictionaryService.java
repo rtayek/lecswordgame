@@ -10,7 +10,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import model.Enums.WordLength;
+import model.enums.WordLength;
 import util.Constants; // Correctly placed import
 
 /**

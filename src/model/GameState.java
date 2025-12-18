@@ -4,12 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import model.Enums.Difficulty;
-import model.Enums.FinishState;
-import model.Enums.GameMode;
-import model.Enums.GameStatus;
-import model.Enums.TimerDuration;
-import model.Enums.WordLength;
+import model.enums.Difficulty;
+import model.enums.FinishState;
+import model.enums.GameMode;
+import model.enums.GameStatus;
+import model.enums.TimerDuration;
+import model.enums.WordLength;
 import model.Records.GamePlayer;
 import model.Records.GuessEntry;
 import model.Records.WordChoice;
@@ -75,10 +75,21 @@ public class GameState {
     /**
      * Initialize the game with chosen words and mark in progress.
      */
-    public void initializeForPlay(WordChoice playerOneWord, WordChoice playerTwoWord) {
+    public void startWithChosenWords(GameConfig cfg, WordChoice playerOneWord, WordChoice playerTwoWord) {
+        if (!Objects.equals(cfg, this.config)) {
+            throw new IllegalArgumentException("Config mismatch for game start");
+        }
         setStatus(GameStatus.inProgress);
         setPlayerOneWord(playerOneWord);
         setPlayerTwoWord(playerTwoWord);
+    }
+
+    /**
+     * Handle a timer expiration for the given player: opponent wins by forfeit.
+     */
+    public void handleTimeout(GamePlayer expiredPlayer) {
+        GamePlayer winner = getOpponent(expiredPlayer);
+        finishWithWinner(winner);
     }
 
     void setStatus(GameStatus status) {
@@ -136,7 +147,7 @@ public class GameState {
     }
 
     public FinishState getPlayerFinishState(GamePlayer player) {
-        if (player == null) return FinishState.NOT_FINISHED;
+        if (player == null) return FinishState.notFinished;
         return Objects.equals(player, config.playerOne()) ? playerOneFinishState : playerTwoFinishState;
     }
 
@@ -147,37 +158,47 @@ public class GameState {
 
         if (config.mode() == GameMode.solo) {
             if (result.exactMatch()) {
-                setWinner(player);
-                setStatus(GameStatus.finished);
+                finishWithWinner(player);
             }
             return;
         }
 
         GamePlayer opponent = getOpponent(player);
-        boolean isFinalGuess = getPlayerFinishState(opponent) != FinishState.NOT_FINISHED;
+        boolean isFinalGuess = getPlayerFinishState(opponent) != FinishState.notFinished;
 
         if (result.exactMatch()) {
-            setPlayerFinishState(player, FinishState.FINISHED_SUCCESS);
+            markPlayerFinished(player, FinishState.finishedSuccess);
             if (isFinalGuess) {
-                setStatus(GameStatus.finished);
-                if (getPlayerFinishState(opponent) == FinishState.FINISHED_SUCCESS) {
-                    setWinner(null); // Tie
+                if (getPlayerFinishState(opponent) == FinishState.finishedSuccess) {
+                    finishWithWinner(null); // Tie
                 } else {
-                    setWinner(player);
+                    finishWithWinner(player);
                 }
             } else {
-                setStatus(GameStatus.waitingForFinalGuess);
+                awaitFinalGuess();
                 switchTurn();
             }
         } else {
             if (isFinalGuess) {
-                setPlayerFinishState(player, FinishState.FINISHED_FAIL);
-                setStatus(GameStatus.finished);
-                setWinner(opponent);
+                markPlayerFinished(player, FinishState.finishedFail);
+                finishWithWinner(opponent);
             } else {
                 switchTurn();
             }
         }
+    }
+
+    private void markPlayerFinished(GamePlayer player, FinishState state) {
+        setPlayerFinishState(player, state);
+    }
+
+    private void awaitFinalGuess() {
+        setStatus(GameStatus.waitingForFinalGuess);
+    }
+
+    void finishWithWinner(GamePlayer winner) {
+        setStatus(GameStatus.finished);
+        setWinner(winner);
     }
 
     private void validateWordLength(WordChoice wordChoice) {
@@ -200,6 +221,6 @@ public class GameState {
     GamePlayer currentTurn;
     final List<GuessEntry> guesses;
     GamePlayer winner;
-    private FinishState playerOneFinishState = FinishState.NOT_FINISHED;
-    private FinishState playerTwoFinishState = FinishState.NOT_FINISHED;
+    private FinishState playerOneFinishState = FinishState.notFinished;
+    private FinishState playerTwoFinishState = FinishState.notFinished;
 }

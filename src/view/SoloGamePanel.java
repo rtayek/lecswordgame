@@ -1,6 +1,7 @@
 package view;
 
 import controller.AppController;
+import controller.GameOutcomePresenter;
 import controller.TurnTimer;
 import view.listeners.GameEventListener;
 import view.listeners.GameStateListener;
@@ -11,31 +12,30 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-import model.Enums.Difficulty;
+import model.enums.Difficulty;
 import model.Records.GamePlayer;
 import model.Records.PlayerProfile;
 import model.GameState;
 
 import java.awt.Color;
 import javax.swing.JOptionPane;
-import javax.swing.ImageIcon;
 // import java.net.URL; // Removed: ResourceLoader handles URL
 // import java.awt.Image; // Removed: no longer needed for manual scaling
 // import java.awt.image.BufferedImage; // Removed: no longer needed for manual scaling
 // import java.awt.Graphics2D; // Removed: no longer needed for manual scaling
 // import java.awt.RenderingHints; // Removed: no longer needed for manual scaling
-import model.Enums.GameStatus;
-import util.ResourceLoader; // Import ResourceLoader
-import util.SoundEffect;
+import model.enums.GameStatus;
 
 class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameStateListener, GameEventListener {
 
     private final AppController appController;
+    private final GameOutcomePresenter outcomePresenter;
     private final TurnTimer timerController;
 
     SoloGamePanel(Navigation navigation, AppController appController, TurnTimer timerController) {
         this.navigation = navigation;
         this.appController = appController;
+        this.outcomePresenter = new GameOutcomePresenter();
         this.timerController = timerController;
         this.player = new GamePlayer(new PlayerProfile("You", ""), true);
         
@@ -116,7 +116,7 @@ class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameStateListe
 
     @Override
     public void onGameOver(GameState finalState) {
-        onGameFinished(finalState);
+        onGameFinished(finalState, null);
     }
     
     private void handleGuess() {
@@ -128,58 +128,30 @@ class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameStateListe
         }
     }
     
-    private void onGameFinished(GameState state) {
+    private void onGameFinished(GameState state, Boolean playerKnewWord) {
         // Disable input elements when the game is finished
         guessField.setEnabled(false);
         keyboardPanel.setEnabled(false);
 
-        boolean playerWon = (state.getWinner() != null && state.getWinner().equals(player));
-        String message;
-        SoundEffect soundEffect;
-        String graphicFile; // Placeholder for graphic file path
-
-        if (playerWon) {
-            soundEffect = SoundEffect.WIN; // Use SoundEffect enum
-            graphicFile = "win.png"; // Use filename directly (corrected to .png)
-            
-            // "Did you know this word?" prompt
-            int choice = JOptionPane.showConfirmDialog(
-                this,
-                "You guessed the word! Did you know this word?",
-                "Win Condition",
-                JOptionPane.YES_NO_OPTION
-            );
-
-            if (choice == JOptionPane.NO_OPTION) {
-                // If they did not know the word, they automatically win.
-                message = "Congratulations! You won because you didn't know the word!";
-            } else {
-                // If they knew the word, it's just a regular win.
-                message = "Congratulations! You won!";
-            }
-        } else {
-            soundEffect = SoundEffect.LOSE; // Use SoundEffect enum
-            graphicFile = "lose.png"; // Use filename directly (corrected to .png)
-            String targetWord = state.wordFor(player).word(); // Get the word the player was guessing
-            message = "Game Over! The word was: " + targetWord + ". You lost!";
+        var vm = outcomePresenter.buildSolo(state, playerKnewWord);
+        if (vm == null) {
+            return;
         }
-        
-        // Play sound
-        ResourceLoader.playSound(soundEffect); // Use ResourceLoader
-        
-        // Handle Optional<ImageIcon>
-        ImageIcon graphicIcon = ResourceLoader.getImageIcon(graphicFile, 100, 100).orElse(null);
 
-        // Display graphic (for now, a simple message dialog)
-        JOptionPane.showMessageDialog(
-            this,
-            message,
-            playerWon ? "You Win!" : "You Lose!",
-            JOptionPane.INFORMATION_MESSAGE,
-            graphicIcon
-        );
+        var toShow = vm;
+        Boolean finalKnew = playerKnewWord;
+        if (vm.nextAction() == GameOutcomePresenter.NextAction.ASK_WINNER_KNOWLEDGE) {
+            int choice = JOptionPane.showConfirmDialog(this, vm.message(), vm.title(), JOptionPane.YES_NO_OPTION);
+            finalKnew = (choice == JOptionPane.YES_OPTION);
+            toShow = outcomePresenter.buildSolo(state, finalKnew);
+        }
 
-        // Optionally navigate back to setup or landing
+        if (toShow == null) {
+            return;
+        }
+
+        OutcomeRenderer.render(this, toShow);
+
         navigation.showGameSetup(); // Or showLanding()
     }
     

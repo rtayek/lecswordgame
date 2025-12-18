@@ -11,8 +11,8 @@ import java.util.stream.Collectors;
 
 import model.Records.GameLogEntry;
 import model.Records.PlayerProfile;
-import model.Enums.Difficulty;
-import model.Enums.WordLength;
+import model.enums.Difficulty;
+import model.enums.WordLength;
 import model.Records.HardWordEntry;
 
 public class PersistenceService {
