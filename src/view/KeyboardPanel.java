@@ -104,15 +104,15 @@ class KeyboardPanel extends JPanel {
 
         // Normal and Hard modes
         switch (feedback) {
-            case correctPosition:
+            case correct:
                 return new Color(0x2E7D32); // Green
-            case wrongPosition:
+            case present:
                 if (difficulty == Difficulty.hard) {
                     return new Color(0x2E7D32); // Green for "present in word" in Hard mode
                 } else {
                     return new Color(0xF9A825); // Orange for "wrong position" in Normal mode
                 }
-            case notInWord:
+            case notPresent:
                 return new Color(0xB71C1C); // Red
             case unused:
             default:
@@ -123,10 +123,10 @@ class KeyboardPanel extends JPanel {
     // Define precedence for feedback types (higher means "better")
     private int getFeedbackPrecedence(LetterFeedback fb) {
         return switch (fb) {
-            case correctPosition -> 3;
-            case wrongPosition -> 2;
-            case notInWord -> 1;
-            case usedPresent, usedNotPresent, unused -> 0; // These are less specific or initial states
+            case correct -> 3;
+            case present -> 2;
+            case notPresent -> 1;
+            case unused -> 0; // initial state
         };
     }
 

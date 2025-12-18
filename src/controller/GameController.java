@@ -1,9 +1,6 @@
 package controller;
 
-import java.util.ArrayList;
-import java.util.List;
 import model.enums.Difficulty;
-import model.enums.LetterFeedback;
 import model.enums.GameStatus;
 import model.GameState;
 import model.GameState.GameConfig;
@@ -14,10 +11,17 @@ import model.Records.WordChoice;
 
 import model.Records.GuessOutcome;
 import model.enums.WordLength;
+import controller.evaluator.ExpertEvaluator;
+import controller.evaluator.GuessEvaluator;
+import controller.evaluator.HardEvaluator;
+import controller.evaluator.NormalEvaluator;
 
 public class GameController {
 
     private final DictionaryService dictionaryService;
+    private final GuessEvaluator normalEvaluator = new NormalEvaluator();
+    private final GuessEvaluator hardEvaluator = new HardEvaluator();
+    private final GuessEvaluator expertEvaluator = new ExpertEvaluator();
 
     public GameController(DictionaryService dictionaryService) {
         this.dictionaryService = dictionaryService;
@@ -98,87 +102,10 @@ public class GameController {
     }
 
     private GuessResult evaluateGuess(String guess, String target, Difficulty difficulty) {
-        List<EvaluatedLetter> evaluatedLetters = evaluateCore(guess, target);
-        List<LetterFeedback> feedback = new ArrayList<>();
-        int correctLetterCount = 0;
-        boolean exactMatch = true;
-
-        for (EvaluatedLetter el : evaluatedLetters) {
-            switch (el.type()) {
-                case CORRECT_POSITION:
-                    correctLetterCount++;
-                    if (difficulty == Difficulty.normal || difficulty == Difficulty.hard) {
-                        feedback.add(LetterFeedback.correctPosition);
-                    }
-                    break;
-
-                case WRONG_POSITION:
-                    correctLetterCount++;
-                    exactMatch = false;
-                    if (difficulty == Difficulty.normal || difficulty == Difficulty.hard) {
-                        feedback.add(LetterFeedback.wrongPosition);
-                    }
-                    break;
-
-                case NOT_IN_WORD:
-                    exactMatch = false;
-                    if (difficulty == Difficulty.normal || difficulty == Difficulty.hard) {
-                        feedback.add(LetterFeedback.notInWord);
-                    }
-                    break;
-            }
-        }
-
-        // For expert mode, feedback list is intentionally empty
-        return new GuessResult(guess, feedback, correctLetterCount, exactMatch);
+        return switch (difficulty) {
+            case normal -> normalEvaluator.evaluate(guess, target);
+            case hard -> hardEvaluator.evaluate(guess, target);
+            case expert -> expertEvaluator.evaluate(guess, target);
+        };
     }
-
-
-    private List<EvaluatedLetter> evaluateCore(String guess, String target) {
-        int length = guess.length();
-        List<EvaluatedLetter> evaluated = new ArrayList<>(length);
-        char[] guessChars = guess.toLowerCase().toCharArray();
-        char[] targetChars = target.toLowerCase().toCharArray();
-        boolean[] usedInTarget = new boolean[length]; // Tracks which target chars have been matched
-
-        // First pass: Find CORRECT_POSITION matches
-        for (int i = 0; i < length; i++) {
-            if (guessChars[i] == targetChars[i]) {
-                evaluated.add(new EvaluatedLetter(guessChars[i], MatchResultType.CORRECT_POSITION));
-                usedInTarget[i] = true;
-            } else {
-                evaluated.add(null); // Placeholder for now, will be filled in second pass
-            }
-        }
-
-        // Second pass: Find WRONG_POSITION or NOT_IN_WORD matches
-        for (int i = 0; i < length; i++) {
-            if (evaluated.get(i) != null) { // Already matched in correct position
-                continue;
-            }
-
-            char c = guessChars[i];
-            boolean found = false;
-            for (int j = 0; j < length; j++) {
-                if (!usedInTarget[j] && targetChars[j] == c) {
-                    evaluated.set(i, new EvaluatedLetter(c, MatchResultType.WRONG_POSITION));
-                    usedInTarget[j] = true;
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                evaluated.set(i, new EvaluatedLetter(c, MatchResultType.NOT_IN_WORD));
-            }
-        }
-        return evaluated;
-    }
-
-    private enum MatchResultType {
-        CORRECT_POSITION,
-        WRONG_POSITION,
-        NOT_IN_WORD
-    }
-
-    private record EvaluatedLetter(char letter, MatchResultType type) {}
 }
