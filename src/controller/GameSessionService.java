@@ -14,7 +14,7 @@ import controller.TurnTimer;
 import controller.events.GameEvent;
 import controller.events.GameEvent.GameEventKind;
 import controller.events.GameEventListener;
-import controller.events.GameView;
+import controller.events.GameUiModel;
 import controller.api.GameStateListener;
 
 /**
@@ -157,23 +157,41 @@ public class GameSessionService implements TurnTimer.Listener {
     }
 
     private void publish(GameEventKind kind, Object metadata) {
-        var event = new GameEvent(kind, toView(currentGameState), metadata);
+        var event = new GameEvent(kind, toUiModel(currentGameState), metadata);
         for (GameEventListener l : eventListeners) {
             l.onGameEvent(event);
         }
     }
 
-    private GameView toView(GameState state) {
+    private GameUiModel toUiModel(GameState state) {
         if (state == null) return null;
-        return new GameView(
+        String playerOneName = name(state.getConfig().playerOne());
+        String playerTwoName = name(state.getConfig().playerTwo());
+        String winnerName = state.getWinner() == null ? null : name(state.getWinner());
+        String provisional = state.getProvisionalWinner() == null ? null : name(state.getProvisionalWinner());
+        Integer p1Remaining = turnTimer != null && state.getConfig().playerOne() != null
+                ? turnTimer.getRemainingFor(state.getConfig().playerOne())
+                : null;
+        Integer p2Remaining = turnTimer != null && state.getConfig().playerTwo() != null
+                ? turnTimer.getRemainingFor(state.getConfig().playerTwo())
+                : null;
+        int timerSeconds = state.getConfig().timerDuration() != null ? state.getConfig().timerDuration().seconds() : 0;
+        return new GameUiModel(
                 state.getId(),
                 state.getStatus(),
-                state.getConfig(),
-                state.getCurrentTurn(),
-                state.getWinner(),
-                state.getProvisionalWinner(),
-                state.getPlayerFinishState(state.getConfig().playerOne()),
-                state.getPlayerFinishState(state.getConfig().playerTwo())
+                name(state.getCurrentTurn()),
+                winnerName,
+                provisional,
+                playerOneName,
+                playerTwoName,
+                timerSeconds,
+                p1Remaining,
+                p2Remaining
         );
+    }
+
+    private String name(model.GamePlayer player) {
+        if (player == null || player.profile() == null || player.profile().username() == null) return null;
+        return player.profile().username();
     }
 }

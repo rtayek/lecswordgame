@@ -133,9 +133,9 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
                 keyboardPanel.setEnabled(true);
                 submitButton.setEnabled(true);
                 var view = event.view();
-                if (view != null && view.config() != null) {
-                    updateTimerLabel(playerOneTimerLabel, view.config().timerDuration().seconds());
-                    updateTimerLabel(playerTwoTimerLabel, view.config().timerDuration().seconds());
+                if (view != null) {
+                    updateTimerLabel(playerOneTimerLabel, view.timerDurationSeconds());
+                    updateTimerLabel(playerTwoTimerLabel, view.timerDurationSeconds());
                 }
                 updateCurrentPlayerLabel(appController.getGameState());
             }

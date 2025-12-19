@@ -1,6 +1,9 @@
 package controller.events;
 
-public record GameEvent(GameEventKind kind, GameView view, Object metadata) {
+/**
+ * Event emitted to listeners with an immutable UI-friendly snapshot.
+ */
+public record GameEvent(GameEventKind kind, GameUiModel view, Object metadata) {
     public enum GameEventKind {
         gameStarted,
         gameStateUpdated,
