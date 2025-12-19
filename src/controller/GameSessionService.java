@@ -162,12 +162,6 @@ public class GameSessionService implements TurnTimer.Listener {
                 ? turnTimer.getRemainingFor(state.getConfig().playerTwo())
                 : null;
         int timerSeconds = state.getConfig().timerDuration() != null ? state.getConfig().timerDuration().seconds() : 0;
-        String targetWord = null;
-        // Only reveal in solo and only after game finishes (for loss messaging).
-        if (state.getConfig().mode() == GameMode.solo && state.getStatus() == GameStatus.finished) {
-            var targetChoice = state.wordFor(state.getConfig().playerOne());
-            targetWord = targetChoice != null ? targetChoice.word() : null;
-        }
         var guesses = state.getGuesses().stream()
                 .map(g -> new controller.events.GuessView(
                         name(g.player()),
@@ -188,8 +182,7 @@ public class GameSessionService implements TurnTimer.Listener {
                 p1Remaining,
                 p2Remaining,
                 List.copyOf(guesses),
-                keyboard,
-                targetWord
+                keyboard
         );
     }
 
@@ -199,23 +192,56 @@ public class GameSessionService implements TurnTimer.Listener {
     }
 
     private controller.events.KeyboardView buildKeyboardView(GameState state) {
-        // Basic keyboard aggregation: mark letters as used/present/correct based on guesses.
         var keyStates = new java.util.HashMap<Character, String>();
+        var difficulty = state.getConfig().difficulty();
+
         state.getGuesses().forEach(g -> {
-            var feedback = g.result().feedback();
             var guessWord = g.result().guess();
-            for (int i = 0; i < guessWord.length() && i < feedback.size(); i++) {
-                char c = Character.toUpperCase(guessWord.charAt(i));
-                var fb = feedback.get(i);
-                if (fb == null) continue;
-                switch (fb) {
-                    case correct -> keyStates.put(c, "correct");
-                    case present -> keyStates.putIfAbsent(c, "present");
-                    case notPresent -> keyStates.putIfAbsent(c, "absent");
-                    default -> keyStates.putIfAbsent(c, "used");
+            var feedback = g.result().feedback();
+
+            if (difficulty == model.enums.Difficulty.expert) {
+                // Expert: no feedback, just mark used letters.
+                for (int i = 0; i < guessWord.length(); i++) {
+                    char c = Character.toUpperCase(guessWord.charAt(i));
+                    keyStates.putIfAbsent(c, "used");
+                }
+            } else {
+                for (int i = 0; i < guessWord.length(); i++) {
+                    char c = Character.toUpperCase(guessWord.charAt(i));
+                    var fb = (i < feedback.size()) ? feedback.get(i) : null;
+                    String newState = switch (fb) {
+                        case correct -> "correct";
+                        case present -> "present";
+                        case notPresent -> "absent";
+                        default -> "used";
+                    };
+                    mergeKeyState(keyStates, c, newState);
                 }
             }
         });
         return new controller.events.KeyboardView(java.util.Map.copyOf(keyStates));
+    }
+
+    private void mergeKeyState(java.util.Map<Character, String> keyStates, char letter, String newState) {
+        String existing = keyStates.get(letter);
+        if (existing == null) {
+            keyStates.put(letter, newState);
+            return;
+        }
+        // Precedence: correct > present > absent > used
+        int rankExisting = rank(existing);
+        int rankNew = rank(newState);
+        if (rankNew > rankExisting) {
+            keyStates.put(letter, newState);
+        }
+    }
+
+    private int rank(String state) {
+        return switch (state) {
+            case "correct" -> 3;
+            case "present" -> 2;
+            case "absent" -> 1;
+            default -> 0; // used
+        };
     }
 }

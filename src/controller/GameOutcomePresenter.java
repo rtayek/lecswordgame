@@ -95,9 +95,8 @@ public class GameOutcomePresenter {
             return new OutcomeViewModel("You Win!", "Congratulations! You won!", "win.png", SoundEffect.win, NextAction.NONE);
         }
 
-        // Player lost; show target word if known
-        String targetWord = state.targetWord() != null ? state.targetWord() : "unknown";
-        String msg = "Game Over! The word was: " + targetWord + ". You lost!";
+        // Player lost
+        String msg = "Game Over! You lost!";
         return new OutcomeViewModel("You Lose!", msg, "lose.png", SoundEffect.lose, NextAction.NONE);
     }
 

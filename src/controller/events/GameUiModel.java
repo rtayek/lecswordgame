@@ -20,6 +20,5 @@ public record GameUiModel(
         Integer playerOneRemaining,
         Integer playerTwoRemaining,
         List<GuessView> guesses,
-        KeyboardView keyboard,
-        String targetWord
+        KeyboardView keyboard
 ) { }
