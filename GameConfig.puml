@@ -1,0 +1,27 @@
+@startuml
+skinparam defaultFontSize 18
+skinparam classAttributeIconSize 0
+
+class GameConfig <<record>> {
+  +mode : GameMode
+  +difficulty : Difficulty
+  +wordLength : WordLength
+  +timerDuration : TimerDuration
+  +playerOne : GamePlayer
+  +playerTwo : GamePlayer
+}
+
+enum GameMode
+enum Difficulty
+enum WordLength
+enum TimerDuration
+
+class GamePlayer
+
+GameConfig --> GameMode
+GameConfig --> Difficulty
+GameConfig --> WordLength
+GameConfig --> TimerDuration
+GameConfig --> GamePlayer : playerOne
+GameConfig --> GamePlayer : playerTwo
+@enduml

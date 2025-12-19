@@ -1,0 +1,26 @@
+@startuml
+skinparam defaultFontSize 18
+
+package "view" {
+  class MainFrame
+  class WordSelectionPanel
+}
+
+package "controller" {
+  class AppController
+  class GameSessionService
+  class NavigationCoordinator
+}
+
+package "model" {
+  class GameState
+  class GameConfig
+  class GamePlayer
+}
+
+MainFrame --> AppController
+AppController --> GameSessionService
+GameSessionService --> GameState
+GameSessionService --> GameConfig
+GameState --> GamePlayer
+@enduml
