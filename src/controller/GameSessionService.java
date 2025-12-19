@@ -195,53 +195,51 @@ public class GameSessionService implements TurnTimer.Listener {
         var keyStates = new java.util.HashMap<Character, String>();
         var difficulty = state.getConfig().difficulty();
 
+        java.util.function.BiFunction<String, String, String> merge = (oldV, newV) -> {
+            if (oldV == null) return newV;
+            int oldS = strength(oldV);
+            int newS = strength(newV);
+            return newS > oldS ? newV : oldV;
+        };
+
         state.getGuesses().forEach(g -> {
-            var guessWord = g.result().guess();
+            var guess = g.result().guess();
             var feedback = g.result().feedback();
 
             if (difficulty == model.enums.Difficulty.expert) {
-                // Expert: no feedback, just mark used letters.
-                for (int i = 0; i < guessWord.length(); i++) {
-                    char c = Character.toUpperCase(guessWord.charAt(i));
-                    keyStates.putIfAbsent(c, "used");
+                for (int i = 0; i < guess.length(); i++) {
+                    char c = Character.toUpperCase(guess.charAt(i));
+                    keyStates.put(c, merge.apply(keyStates.get(c), "used"));
                 }
-            } else {
-                for (int i = 0; i < guessWord.length(); i++) {
-                    char c = Character.toUpperCase(guessWord.charAt(i));
-                    var fb = (i < feedback.size()) ? feedback.get(i) : null;
-                    String newState = switch (fb) {
-                        case correct -> "correct";
-                        case present -> "present";
-                        case notPresent -> "absent";
-                        default -> "used";
-                    };
-                    mergeKeyState(keyStates, c, newState);
-                }
+                return;
+            }
+
+            int n = Math.min(guess.length(), feedback.size());
+            for (int i = 0; i < n; i++) {
+                char c = Character.toUpperCase(guess.charAt(i));
+                var fb = feedback.get(i);
+                if (fb == null) continue;
+
+                String v = switch (fb) {
+                    case correct -> "correct";
+                    case present -> "present";
+                    case notPresent -> "absent";
+                    default -> "used";
+                };
+
+                keyStates.put(c, merge.apply(keyStates.get(c), v));
             }
         });
+
         return new controller.events.KeyboardView(java.util.Map.copyOf(keyStates));
     }
 
-    private void mergeKeyState(java.util.Map<Character, String> keyStates, char letter, String newState) {
-        String existing = keyStates.get(letter);
-        if (existing == null) {
-            keyStates.put(letter, newState);
-            return;
-        }
-        // Precedence: correct > present > absent > used
-        int rankExisting = rank(existing);
-        int rankNew = rank(newState);
-        if (rankNew > rankExisting) {
-            keyStates.put(letter, newState);
-        }
-    }
-
-    private int rank(String state) {
-        return switch (state) {
+    private int strength(String v) {
+        return switch (v) {
             case "correct" -> 3;
             case "present" -> 2;
             case "absent" -> 1;
-            default -> 0; // used
+            default -> 0; // "used"
         };
     }
 }
