@@ -1,6 +1,5 @@
 package controller;
 
-import model.GameState;
 import model.GamePlayer;
 import model.enums.FinishState;
 import model.enums.GameStatus;
@@ -30,34 +29,32 @@ public class GameOutcomePresenter {
      * @param state the latest game state
      * @param winnerKnewWord optional flag; null means we still need to ask the winner
      */
-    public OutcomeViewModel buildMultiplayer(GameState state, Boolean winnerKnewWord) {
+    public OutcomeViewModel buildMultiplayer(controller.events.GameUiModel state, Boolean winnerKnewWord) {
         if (state == null) return null;
 
-        if (state.getStatus() == GameStatus.waitingForFinalGuess) {
-            GamePlayer lastGuesser = state.getOpponent(state.getCurrentTurn());
-            GamePlayer opponent = state.getCurrentTurn();
+        if (state.status() == GameStatus.waitingForFinalGuess) {
+            String lastGuesser = state.provisionalWinner() != null ? state.provisionalWinner() : state.currentPlayer();
+            String opponent = state.currentPlayer();
             String message = String.format(
                     "%s guessed the word! %s, you get one last chance to guess %s's word.",
-                    name(lastGuesser),
-                    name(opponent),
-                    name(lastGuesser)
+                    safeName(lastGuesser),
+                    safeName(opponent),
+                    safeName(lastGuesser)
             );
             return new OutcomeViewModel("Last Chance!", message, null, null, NextAction.SHOW_LAST_CHANCE);
         }
 
-        if (state.getStatus() == GameStatus.awaitingWinnerKnowledge) {
-            GamePlayer winner = state.getProvisionalWinner() != null ? state.getProvisionalWinner() : state.getCurrentTurn();
-            String ask = String.format("%s, you guessed the word! Did you know this word?", name(winner));
+        if (state.status() == GameStatus.awaitingWinnerKnowledge) {
+            String winner = state.provisionalWinner() != null ? state.provisionalWinner() : state.currentPlayer();
+            String ask = String.format("%s, you guessed the word! Did you know this word?", safeName(winner));
             return new OutcomeViewModel("Win Condition", ask, null, null, NextAction.ASK_WINNER_KNOWLEDGE);
         }
 
-        if (state.getStatus() != GameStatus.finished) {
+        if (state.status() != GameStatus.finished) {
             return null;
         }
 
-        GamePlayer winner = state.getWinner();
-        GamePlayer playerOne = state.getConfig().playerOne();
-        GamePlayer playerTwo = state.getConfig().playerTwo();
+        String winner = state.winner();
 
         if (winner == null) {
             return new OutcomeViewModel("Game Result", "It's a Tie! Both players guessed the word.", "tie.png", SoundEffect.tie, NextAction.NONE);
@@ -65,24 +62,17 @@ public class GameOutcomePresenter {
 
         // Winner exists
         if (winnerKnewWord == null) {
-            String ask = String.format("%s, you guessed the word! Did you know this word?", name(winner));
+            String ask = String.format("%s, you guessed the word! Did you know this word?", safeName(winner));
             return new OutcomeViewModel("Win Condition", ask, null, null, NextAction.ASK_WINNER_KNOWLEDGE);
         }
 
-        GamePlayer losingPlayer = winner.equals(playerOne) ? playerTwo : playerOne;
-        boolean opponentAlsoSucceeded = state.getPlayerFinishState(losingPlayer) == FinishState.finishedSuccess;
-
         if (!winnerKnewWord) {
-            String msg = String.format("Congratulations, %s! You won because you didn't know the word!", name(winner));
-            return new OutcomeViewModel(winnerTitle(winner), msg, "win.png", SoundEffect.win, NextAction.NONE);
+            String msg = String.format("Congratulations, %s! You won because you didn't know the word!", safeName(winner));
+            return new OutcomeViewModel(winner + " Wins!", msg, "win.png", SoundEffect.win, NextAction.NONE);
         }
 
-        if (opponentAlsoSucceeded) {
-            return new OutcomeViewModel("Game Result", "It's a Tie! Both of you knew your words.", "tie.png", SoundEffect.tie, NextAction.NONE);
-        }
-
-        String msg = String.format("Congratulations, %s! You won!", name(winner));
-        return new OutcomeViewModel(winnerTitle(winner), msg, "win.png", SoundEffect.win, NextAction.NONE);
+        String msg = String.format("Congratulations, %s! You won!", safeName(winner));
+        return new OutcomeViewModel(winner + " Wins!", msg, "win.png", SoundEffect.win, NextAction.NONE);
     }
 
     /**
@@ -90,12 +80,11 @@ public class GameOutcomePresenter {
      * @param state the latest game state
      * @param playerKnewWord optional flag; null means we still need to ask
      */
-    public OutcomeViewModel buildSolo(GameState state, Boolean playerKnewWord) {
-        if (state == null || state.getStatus() != GameStatus.finished) {
+    public OutcomeViewModel buildSolo(controller.events.GameUiModel state, Boolean playerKnewWord) {
+        if (state == null || state.status() != GameStatus.finished) {
             return null;
         }
-        GamePlayer winner = state.getWinner();
-        // In solo, winner == player means success
+        String winner = state.winner();
         if (winner != null) {
             if (playerKnewWord == null) {
                 return new OutcomeViewModel("Win Condition", "You guessed the word! Did you know this word?", null, null, NextAction.ASK_WINNER_KNOWLEDGE);
@@ -106,8 +95,8 @@ public class GameOutcomePresenter {
             return new OutcomeViewModel("You Win!", "Congratulations! You won!", "win.png", SoundEffect.win, NextAction.NONE);
         }
 
-        // Player lost; show target word
-        String targetWord = state.wordFor(state.getConfig().playerOne()).word();
+        // Player lost; show target word if known
+        String targetWord = state.targetWord() != null ? state.targetWord() : "unknown";
         String msg = "Game Over! The word was: " + targetWord + ". You lost!";
         return new OutcomeViewModel("You Lose!", msg, "lose.png", SoundEffect.lose, NextAction.NONE);
     }
@@ -121,5 +110,9 @@ public class GameOutcomePresenter {
 
     private String winnerTitle(GamePlayer winner) {
         return name(winner) + " Wins!";
+    }
+    
+    private String safeName(String name) {
+        return (name == null || name.isBlank()) ? "Player" : name;
     }
 }

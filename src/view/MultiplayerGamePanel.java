@@ -3,11 +3,11 @@ package view;
 import controller.AppController;
 import controller.GameOutcomePresenter;
 import controller.TurnTimer;
-import controller.api.GameStateListener;
 import controller.api.Navigation;
 import view.OutcomeRenderer;
 import controller.events.GameEvent;
 import controller.events.GameEventListener;
+import controller.events.GameUiModel;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import javax.swing.JButton;
@@ -15,13 +15,12 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-import model.GameState;
 import model.enums.*;
 import java.awt.Color;
 import javax.swing.JOptionPane;
 import javax.swing.ImageIcon;
 
-class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameStateListener, GameEventListener {
+class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameEventListener {
 
     private final AppController appController;
     private final Navigation navigation;
@@ -38,6 +37,7 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
     private final KeyboardPanel keyboardPanel;
     private final JLabel statusLabel;
     private final JButton submitButton;
+    private GameUiModel lastModel;
 
     MultiplayerGamePanel(Navigation navigation, AppController appController) {
         this.navigation = navigation;
@@ -45,7 +45,6 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
         this.timerController = navigation.getTimerController();
         this.outcomePresenter = new GameOutcomePresenter();
         
-        appController.addGameStateListener(this);
         appController.addGameEventListener(this);
         timerController.addListener(this);
 
@@ -117,14 +116,10 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
     }
 
     @Override
-    public void onGameStateUpdate(GameState newState) {
-        updateCurrentPlayerLabel(newState);
-    }
-
-    @Override
     public void onGameEvent(GameEvent event) {
         switch (event.kind()) {
             case gameStarted -> {
+                lastModel = event.view();
                 leftGrid.clearRows();
                 rightGrid.clearRows();
                 setStatus(" ");
@@ -132,24 +127,26 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
                 guessField.setEnabled(true);
                 keyboardPanel.setEnabled(true);
                 submitButton.setEnabled(true);
-                var view = event.view();
-                if (view != null) {
-                    updateTimerLabel(playerOneTimerLabel, view.timerDurationSeconds());
-                    updateTimerLabel(playerTwoTimerLabel, view.timerDurationSeconds());
+                if (lastModel != null) {
+                    updateTimerLabel(playerOneTimerLabel, lastModel.timerDurationSeconds());
+                    updateTimerLabel(playerTwoTimerLabel, lastModel.timerDurationSeconds());
                 }
-                updateCurrentPlayerLabel(appController.getGameState());
+                updateCurrentPlayerLabelFromModel();
             }
             case gameStateUpdated -> {
                 // No-op here; rows are added in handleGuess outcome
-                var view = event.view();
-                if (view != null && (view.status() == model.enums.GameStatus.waitingForFinalGuess
-                        || view.status() == model.enums.GameStatus.awaitingWinnerKnowledge)) {
-                    onGameEnd(appController.getGameState(), null);
+                lastModel = event.view();
+                if (lastModel != null && (lastModel.status() == model.enums.GameStatus.waitingForFinalGuess
+                        || lastModel.status() == model.enums.GameStatus.awaitingWinnerKnowledge)) {
+                    onGameEnd(lastModel, null);
                 } else {
-                    updateCurrentPlayerLabel(appController.getGameState());
+                    updateCurrentPlayerLabelFromModel();
                 }
             }
-            case gameFinished -> onGameEnd(appController.getGameState(), null);
+            case gameFinished -> {
+                lastModel = event.view();
+                onGameEnd(lastModel, null);
+            }
             default -> { }
         }
     }
@@ -158,9 +155,14 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
         try {
             var outcome = appController.submitGuess(guessField.getText());
             var result = outcome.entry().result();
-            var difficulty = appController.getGameState().getConfig().difficulty();
+            var difficulty = lastModel != null ? lastModel.difficulty() : model.enums.Difficulty.normal;
 
-            if (outcome.entry().player().equals(appController.getGameState().getConfig().playerOne())) {
+            // Determine target grid by player name
+            boolean isPlayerOne = lastModel != null && lastModel.playerOne() != null
+                    && outcome.entry().player() != null
+                    && outcome.entry().player().profile() != null
+                    && lastModel.playerOne().equals(outcome.entry().player().profile().username());
+            if (isPlayerOne) {
                 leftGrid.addGuessRow(new GuessRowPanel(result, difficulty));
             } else {
                 rightGrid.addGuessRow(new GuessRowPanel(result, difficulty));
@@ -169,9 +171,9 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
             if (outcome.status() == model.enums.GameStatus.waitingForFinalGuess
                     || outcome.status() == model.enums.GameStatus.finished
                     || outcome.status() == model.enums.GameStatus.awaitingWinnerKnowledge) {
-                onGameEnd(appController.getGameState(), null);
+                onGameEnd(lastModel, null);
             } else {
-                updateCurrentPlayerLabel(appController.getGameState());
+                updateCurrentPlayerLabelFromModel();
             }
             guessField.setText("");
         } catch (Exception e) {
@@ -190,8 +192,8 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
         statusLabel.setText(text);
     }
 
-    private void updateCurrentPlayerLabel(GameState state) {
-        if (state == null) {
+    private void updateCurrentPlayerLabelFromModel() {
+        if (lastModel == null) {
             currentPlayerLabel.setText("Current player: (none)");
             submitButton.setEnabled(false);
             guessField.setEnabled(false);
@@ -199,13 +201,12 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
             return;
         }
 
-        if (state.getStatus() == GameStatus.finished) {
-            var winner = state.getWinner();
-            if (winner == null) {
+        if (lastModel.status() == GameStatus.finished) {
+            var winnerName = lastModel.winner();
+            if (winnerName == null) {
                 currentPlayerLabel.setText("Game finished: It's a Tie!");
             } else {
-                var name = winner.profile() != null ? winner.profile().username() : (winner.equals(state.getConfig().playerOne()) ? "Player 1" : "Player 2");
-                currentPlayerLabel.setText(name + " wins!");
+                currentPlayerLabel.setText(winnerName + " wins!");
             }
             submitButton.setEnabled(false);
             guessField.setEnabled(false);
@@ -213,18 +214,9 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
             return;
         }
 
-        var player = state.getCurrentTurn();
-        if (player == null || player.profile() == null) {
-            currentPlayerLabel.setText("Current player: (none)");
-            submitButton.setEnabled(false);
-            guessField.setEnabled(false);
-            keyboardPanel.setEnabled(false);
-            return;
-        }
-
-        var name = player.profile().username();
+        var name = lastModel.currentPlayer();
         if (name == null || name.isBlank()) {
-            name = player.equals(state.getConfig().playerOne()) ? "Player 1" : "Player 2";
+            name = "Player";
         }
 
         currentPlayerLabel.setText("Current player: " + name);
@@ -235,33 +227,29 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
 
     void onShow() {
         // This method is now only for visibility changes, not state initialization.
-        var state = appController.getGameState();
-        updateCurrentPlayerLabel(state);
-        if (state != null) {
-            updateTimerLabel(playerOneTimerLabel, timerController.getRemainingFor(state.getConfig().playerOne()));
-            updateTimerLabel(playerTwoTimerLabel, timerController.getRemainingFor(state.getConfig().playerTwo()));
+        updateCurrentPlayerLabelFromModel();
+        if (lastModel != null) {
+            // We cannot fetch per-player remaining without state; display configured duration.
+            updateTimerLabel(playerOneTimerLabel, lastModel.timerDurationSeconds());
+            updateTimerLabel(playerTwoTimerLabel, lastModel.timerDurationSeconds());
         }
     }
 
     @Override
     public void onTimeUpdated(model.GamePlayer player, int remainingSeconds) {
-        var state = appController.getGameState();
-        if (state == null) return;
-        
-        JLabel labelToUpdate = (player.equals(state.getConfig().playerOne())) ? playerOneTimerLabel : playerTwoTimerLabel;
-        updateTimerLabel(labelToUpdate, remainingSeconds);
+        if (lastModel == null || player == null || player.profile() == null) return;
+        if (lastModel.playerOne() != null && lastModel.playerOne().equals(player.profile().username())) {
+            updateTimerLabel(playerOneTimerLabel, remainingSeconds);
+        } else if (lastModel.playerTwo() != null && lastModel.playerTwo().equals(player.profile().username())) {
+            updateTimerLabel(playerTwoTimerLabel, remainingSeconds);
+        }
     }
 
     @Override
     public void onTimeExpired(model.GamePlayer player) {
-        var state = appController.getGameState();
-        if (state == null) return;
-
+        if (player == null || player.profile() == null) return;
         String name = player.profile().username();
-        if (name == null || name.isBlank()) {
-            name = player.equals(state.getConfig().playerOne()) ? "Player 1" : "Player 2";
-        }
-        setStatus(name + " ran out of time!");
+        setStatus((name == null || name.isBlank() ? "Player" : name) + " ran out of time!");
     }
     
     private void updateTimerLabel(JLabel label, int totalSeconds) {
@@ -270,9 +258,8 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
         label.setText(String.format("%02d:%02d", minutes, seconds));
 
         boolean isTimerRed = false;
-        var gameState = appController.getGameState();
-        if (gameState != null && gameState.getConfig().timerDuration().isTimed()) {
-            int gameDuration = gameState.getConfig().timerDuration().seconds();
+        if (lastModel != null && lastModel.timerDurationSeconds() > 0) {
+            int gameDuration = lastModel.timerDurationSeconds();
             if (gameDuration >= 3 * 60 && totalSeconds < 60) {
                 isTimerRed = true;
             } else if (gameDuration == 1 * 60 && totalSeconds < 30) {
@@ -282,8 +269,8 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
         label.setForeground(isTimerRed ? Color.RED : Color.BLACK);
     }
     
-    private void onGameEnd(GameState state, Boolean winnerKnewWord) {
-        var vm = outcomePresenter.buildMultiplayer(state, winnerKnewWord);
+    private void onGameEnd(GameUiModel uiModel, Boolean winnerKnewWord) {
+        var vm = outcomePresenter.buildMultiplayer(uiModel, winnerKnewWord);
         if (vm == null) {
             return;
         }
@@ -293,7 +280,7 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
             submitButton.setEnabled(true);
             guessField.setEnabled(true);
             keyboardPanel.setEnabled(true);
-            updateCurrentPlayerLabel(state);
+            updateCurrentPlayerLabelFromModel();
             return;
         }
 
@@ -303,7 +290,7 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
             int choice = JOptionPane.showConfirmDialog(this, vm.message(), vm.title(), JOptionPane.YES_NO_OPTION);
             finalWinnerKnew = (choice == JOptionPane.YES_OPTION);
             appController.reportWinnerKnowledge(finalWinnerKnew);
-            toShow = outcomePresenter.buildMultiplayer(appController.getGameState(), finalWinnerKnew);
+            toShow = outcomePresenter.buildMultiplayer(uiModel, finalWinnerKnew);
         }
 
         if (toShow == null) {

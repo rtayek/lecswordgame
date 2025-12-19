@@ -47,7 +47,7 @@ public class GameSessionService implements TurnTimer.Listener {
         }
     }
 
-    public GameState getCurrentGameState() {
+    GameState getCurrentGameState() {
         return currentGameState;
     }
 
@@ -176,9 +176,21 @@ public class GameSessionService implements TurnTimer.Listener {
                 ? turnTimer.getRemainingFor(state.getConfig().playerTwo())
                 : null;
         int timerSeconds = state.getConfig().timerDuration() != null ? state.getConfig().timerDuration().seconds() : 0;
+        String targetWord = null;
+        if (state.getConfig().playerOne() != null && state.wordFor(state.getConfig().playerOne()) != null) {
+            targetWord = state.wordFor(state.getConfig().playerOne()).word();
+        }
+        var guesses = state.getGuesses().stream()
+                .map(g -> new controller.events.GuessView(
+                        name(g.player()),
+                        state.getConfig().playerOne() != null && g.player().equals(state.getConfig().playerOne()),
+                        g.result()))
+                .toList();
+        var keyboard = buildKeyboardView(state);
         return new GameUiModel(
                 state.getId(),
                 state.getStatus(),
+                state.getConfig().difficulty(),
                 name(state.getCurrentTurn()),
                 winnerName,
                 provisional,
@@ -186,12 +198,36 @@ public class GameSessionService implements TurnTimer.Listener {
                 playerTwoName,
                 timerSeconds,
                 p1Remaining,
-                p2Remaining
+                p2Remaining,
+                List.copyOf(guesses),
+                keyboard,
+                targetWord
         );
     }
 
     private String name(model.GamePlayer player) {
         if (player == null || player.profile() == null || player.profile().username() == null) return null;
         return player.profile().username();
+    }
+
+    private controller.events.KeyboardView buildKeyboardView(GameState state) {
+        // Basic keyboard aggregation: mark letters as used/present/correct based on guesses.
+        var keyStates = new java.util.HashMap<Character, String>();
+        state.getGuesses().forEach(g -> {
+            var feedback = g.result().feedback();
+            var guessWord = g.result().guess();
+            for (int i = 0; i < guessWord.length() && i < feedback.size(); i++) {
+                char c = Character.toUpperCase(guessWord.charAt(i));
+                var fb = feedback.get(i);
+                if (fb == null) continue;
+                switch (fb) {
+                    case correct -> keyStates.put(c, "correct");
+                    case present -> keyStates.putIfAbsent(c, "present");
+                    case notPresent -> keyStates.putIfAbsent(c, "absent");
+                    default -> keyStates.putIfAbsent(c, "used");
+                }
+            }
+        });
+        return new controller.events.KeyboardView(java.util.Map.copyOf(keyStates));
     }
 }

@@ -1,5 +1,7 @@
 package controller.events;
 
+import java.util.List;
+import model.enums.Difficulty;
 import model.enums.GameStatus;
 
 /**
@@ -8,6 +10,7 @@ import model.enums.GameStatus;
 public record GameUiModel(
         String gameId,
         GameStatus status,
+        Difficulty difficulty,
         String currentPlayer,
         String winner,
         String provisionalWinner,
@@ -15,5 +18,8 @@ public record GameUiModel(
         String playerTwo,
         int timerDurationSeconds,
         Integer playerOneRemaining,
-        Integer playerTwoRemaining
+        Integer playerTwoRemaining,
+        List<GuessView> guesses,
+        KeyboardView keyboard,
+        String targetWord
 ) { }

@@ -2,7 +2,6 @@ package controller;
 
 import java.util.ArrayList;
 import java.util.List;
-import model.GameState;
 import model.GameState.GameConfig;
 import model.GameLogEntry;
 import model.GamePlayer;
@@ -42,10 +41,6 @@ public class AppController {
     
     public void setNavigation(Navigation navigation) {
         navigationCoordinator.setNavigation(navigation);
-    }
-
-    public GameState getGameState() {
-        return gameSessionService.getCurrentGameState();
     }
 
     public void requestNewGame(GameConfig config) {
