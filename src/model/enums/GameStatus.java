@@ -5,6 +5,6 @@ public enum GameStatus {
     inProgress,
     awaitingWinnerKnowledge,
     waitingForFinalGuess,
-    soloContinue,
+    soloChase,
     finished
 }

@@ -94,12 +94,12 @@ class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameStateListe
                 guessField.setEnabled(true);
                 keyboardPanel.setEnabled(true);
                 setStatus("New game started. Make your guess!");
-                var init = event.snapshot();
-                if (init != null) {
-                    updateTimerLabel(playerTimerLabel, init.getConfig().timerDuration().seconds());
+                var view = event.view();
+                if (view != null && view.config() != null) {
+                    updateTimerLabel(playerTimerLabel, view.config().timerDuration().seconds());
                 }
             }
-            case gameFinished -> onGameFinished(event.snapshot(), null);
+            case gameFinished -> onGameFinished(appController.getGameState(), null);
             default -> { }
         }
     }

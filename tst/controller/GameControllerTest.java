@@ -1,12 +1,5 @@
 package controller;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import model.GamePlayer;
 import model.GameState;
 import model.PlayerProfile;
@@ -19,38 +12,48 @@ import model.enums.WordLength;
 import model.enums.WordSource;
 
 /**
- * JUnit 5 smoke tests for GameController submitGuess logic.
+ * Lightweight self-checks without JUnit dependency.
+ * Run with: java -cp bin;src;tst controller.GameControllerTest
  */
-class GameControllerTest {
+public final class GameControllerTest {
 
-    private GameController gameController;
-    private GamePlayer player;
-    private GamePlayer cpu;
-    private GameState.GameConfig baseConfig;
-
-    @BeforeEach
-    void setUp() {
-        gameController = new GameController(new DictionaryService());
-        player = new GamePlayer(new PlayerProfile("P1", ""), true);
-        cpu = new GamePlayer(new PlayerProfile("CPU", ""), false);
-        baseConfig = new GameState.GameConfig(GameMode.solo, Difficulty.normal, WordLength.five, TimerDuration.none, player, cpu);
+    public static void main(String[] args) {
+        shouldWinSoloOnExactMatch();
+        shouldStayInProgressOnWrongGuess();
+        System.out.println("GameControllerTest passed");
     }
 
-    @Test
-    void shouldWinSoloOnExactMatch() {
-        var state = gameController.startNewGame(baseConfig, null, new WordChoice("APPLE", WordSource.manual));
+    private static void shouldWinSoloOnExactMatch() {
+        var gameController = new GameController(new DictionaryService());
+        var player = new GamePlayer(new PlayerProfile("P1", ""), true);
+        var cpu = new GamePlayer(new PlayerProfile("CPU", ""), false);
+        var config = new GameState.GameConfig(GameMode.solo, Difficulty.normal, WordLength.five, TimerDuration.none, player, cpu);
+
+        var state = gameController.startNewGame(config, null, new WordChoice("APPLE", WordSource.manual));
         gameController.submitGuess(state, player, "apple");
 
-        assertEquals(GameStatus.finished, state.getStatus(), "Game should finish on exact match");
-        assertSame(player, state.getWinner(), "Human should be winner");
+        if (state.getStatus() != GameStatus.finished) {
+            throw new AssertionError("Game should finish on exact match");
+        }
+        if (state.getWinner() != player) {
+            throw new AssertionError("Human should be winner");
+        }
     }
 
-    @Test
-    void shouldStayInProgressOnWrongGuess() {
-        var state = gameController.startNewGame(baseConfig, null, new WordChoice("APPLE", WordSource.manual));
+    private static void shouldStayInProgressOnWrongGuess() {
+        var gameController = new GameController(new DictionaryService());
+        var player = new GamePlayer(new PlayerProfile("P1", ""), true);
+        var cpu = new GamePlayer(new PlayerProfile("CPU", ""), false);
+        var config = new GameState.GameConfig(GameMode.solo, Difficulty.normal, WordLength.five, TimerDuration.none, player, cpu);
+
+        var state = gameController.startNewGame(config, null, new WordChoice("APPLE", WordSource.manual));
         gameController.submitGuess(state, player, "grape");
 
-        assertEquals(GameStatus.inProgress, state.getStatus(), "Wrong guess should keep game in progress");
-        assertNull(state.getWinner(), "No winner on wrong guess");
+        if (state.getStatus() != GameStatus.inProgress) {
+            throw new AssertionError("Wrong guess should keep game in progress");
+        }
+        if (state.getWinner() != null) {
+            throw new AssertionError("No winner on wrong guess");
+        }
     }
 }

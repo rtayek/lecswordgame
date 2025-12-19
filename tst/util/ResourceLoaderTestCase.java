@@ -1,26 +1,34 @@
 package util;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.net.URL;
 
 import javax.swing.ImageIcon;
 
-import org.junit.jupiter.api.Test;
+/**
+ * Simple resource loader smoke test without JUnit dependency.
+ */
+public final class ResourceLoaderTestCase {
 
-class ResourceLoaderTestCase {
+    public static void main(String[] args) {
+        shouldLoadAppPng();
+        System.out.println("ResourceLoaderTestCase passed");
+    }
 
-    @Test
-    void shouldLoadAppPng() {
+    private static void shouldLoadAppPng() {
         String path = "app.png";
         URL imageUrl = Thread.currentThread().getContextClassLoader().getResource(path);
-        assertNotNull(imageUrl, "app.png should be on classpath");
+        if (imageUrl == null) {
+            throw new AssertionError("app.png should be on classpath");
+        }
 
         ImageIcon originalIcon = new ImageIcon(imageUrl);
-        assertTrue(originalIcon.getImageLoadStatus() != java.awt.MediaTracker.ERRORED, "Image should load");
+        if (originalIcon.getImageLoadStatus() == java.awt.MediaTracker.ERRORED) {
+            throw new AssertionError("Image should load");
+        }
 
         var scaled = ResourceLoader.getScaledImage(originalIcon.getImage(), 32, 32);
-        assertNotNull(scaled, "Scaled image should be returned");
+        if (scaled == null) {
+            throw new AssertionError("Scaled image should be returned");
+        }
     }
 }

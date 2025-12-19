@@ -1,23 +1,22 @@
 package controller;
 
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.Test;
 
 import model.GamePlayer;
 import model.PlayerProfile;
 
 /**
- * JUnit 5 smoke test to ensure TurnTimer fans out events to multiple listeners.
+ * Simple smoke test without JUnit dependency.
  */
-class TurnTimerTest {
+public final class TurnTimerTest {
 
-    @Test
-    void shouldNotifyAllListeners() throws Exception {
+    public static void main(String[] args) throws Exception {
+        shouldNotifyAllListeners();
+        System.out.println("TurnTimerTest passed");
+    }
+
+    private static void shouldNotifyAllListeners() throws Exception {
         TurnTimer timer = new TimerController();
         var player = new GamePlayer(new PlayerProfile("P1", ""), true);
 
@@ -52,7 +51,11 @@ class TurnTimerTest {
         timer.setTimeForPlayer(player, 1);
         timer.start(player);
 
-        assertTrue(expireLatch.await(2, TimeUnit.SECONDS), "Listeners should receive expiry");
-        assertNotEquals(2, updateLatch.getCount(), "Listeners should receive at least one update");
+        if (!expireLatch.await(2, TimeUnit.SECONDS)) {
+            throw new AssertionError("Listeners should receive expiry");
+        }
+        if (updateLatch.getCount() == 2) {
+            throw new AssertionError("Listeners should receive at least one update");
+        }
     }
 }

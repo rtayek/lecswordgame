@@ -80,6 +80,10 @@ public class GameState {
             throw new IllegalArgumentException("Config mismatch for game start");
         }
         setStatus(GameStatus.inProgress);
+        this.winner = null;
+        this.provisionalWinner = null;
+        this.playerOneFinishState = FinishState.notFinished;
+        this.playerTwoFinishState = FinishState.notFinished;
         setPlayerOneWord(playerOneWord);
         setPlayerTwoWord(playerTwoWord);
     }
@@ -102,7 +106,7 @@ public class GameState {
             return;
         }
 
-        if (status != GameStatus.finished && status != GameStatus.soloContinue) {
+        if (status != GameStatus.finished && status != GameStatus.soloChase) {
             return;
         }
         if (winner == null) {
@@ -230,7 +234,7 @@ public class GameState {
         } else {
             if (isFinalGuess) {
                 markPlayerFinished(player, FinishState.finishedFail);
-                setStatus(GameStatus.soloContinue); // allow optional continue for fun
+                setStatus(GameStatus.soloChase); // allow optional continue for fun
                 finishWithWinner(opponent);
             } else {
                 switchTurn();

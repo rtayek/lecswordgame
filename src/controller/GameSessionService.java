@@ -14,6 +14,7 @@ import controller.TurnTimer;
 import controller.events.GameEvent;
 import controller.events.GameEvent.GameEventKind;
 import controller.events.GameEventListener;
+import controller.events.GameView;
 import controller.api.GameStateListener;
 
 /**
@@ -74,6 +75,9 @@ public class GameSessionService implements TurnTimer.Listener {
         if (currentGameState == null) {
             throw new IllegalStateException("Start a new game first.");
         }
+        if (currentGameState.getStatus() == GameStatus.awaitingWinnerKnowledge) {
+            throw new IllegalStateException("Awaiting winner knowledge; no guesses allowed.");
+        }
         GamePlayer player = currentGameState.getCurrentTurn();
         GuessOutcome outcome = gameController.submitGuess(currentGameState, player, guess);
         GameStatus newStatus = outcome.status();
@@ -116,7 +120,7 @@ public class GameSessionService implements TurnTimer.Listener {
 
         stateListeners.forEach(l -> l.onGameStateUpdate(currentGameState));
 
-        if (after == GameStatus.finished || after == GameStatus.soloContinue) {
+        if (after == GameStatus.finished || after == GameStatus.soloChase) {
             publish(GameEventKind.gameFinished, winnerKnewWord);
             turnTimer.stop();
         } else {
@@ -153,9 +157,23 @@ public class GameSessionService implements TurnTimer.Listener {
     }
 
     private void publish(GameEventKind kind, Object metadata) {
-        var event = new GameEvent(kind, currentGameState, metadata);
+        var event = new GameEvent(kind, toView(currentGameState), metadata);
         for (GameEventListener l : eventListeners) {
             l.onGameEvent(event);
         }
+    }
+
+    private GameView toView(GameState state) {
+        if (state == null) return null;
+        return new GameView(
+                state.getId(),
+                state.getStatus(),
+                state.getConfig(),
+                state.getCurrentTurn(),
+                state.getWinner(),
+                state.getProvisionalWinner(),
+                state.getPlayerFinishState(state.getConfig().playerOne()),
+                state.getPlayerFinishState(state.getConfig().playerTwo())
+        );
     }
 }

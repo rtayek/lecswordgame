@@ -132,24 +132,24 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
                 guessField.setEnabled(true);
                 keyboardPanel.setEnabled(true);
                 submitButton.setEnabled(true);
-                var init = event.snapshot();
-                if (init != null) {
-                    updateTimerLabel(playerOneTimerLabel, init.getConfig().timerDuration().seconds());
-                    updateTimerLabel(playerTwoTimerLabel, init.getConfig().timerDuration().seconds());
-                    updateCurrentPlayerLabel(init);
+                var view = event.view();
+                if (view != null && view.config() != null) {
+                    updateTimerLabel(playerOneTimerLabel, view.config().timerDuration().seconds());
+                    updateTimerLabel(playerTwoTimerLabel, view.config().timerDuration().seconds());
                 }
+                updateCurrentPlayerLabel(appController.getGameState());
             }
             case gameStateUpdated -> {
                 // No-op here; rows are added in handleGuess outcome
-                var state = event.snapshot();
-                if (state != null && (state.getStatus() == model.enums.GameStatus.waitingForFinalGuess
-                        || state.getStatus() == model.enums.GameStatus.awaitingWinnerKnowledge)) {
-                    onGameEnd(state, null);
+                var view = event.view();
+                if (view != null && (view.status() == model.enums.GameStatus.waitingForFinalGuess
+                        || view.status() == model.enums.GameStatus.awaitingWinnerKnowledge)) {
+                    onGameEnd(appController.getGameState(), null);
                 } else {
-                    updateCurrentPlayerLabel(state);
+                    updateCurrentPlayerLabel(appController.getGameState());
                 }
             }
-            case gameFinished -> onGameEnd(event.snapshot(), null);
+            case gameFinished -> onGameEnd(appController.getGameState(), null);
             default -> { }
         }
     }
