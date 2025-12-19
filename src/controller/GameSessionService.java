@@ -15,7 +15,6 @@ import controller.events.GameEvent;
 import controller.events.GameEvent.GameEventKind;
 import controller.events.GameEventListener;
 import controller.events.GameUiModel;
-import controller.api.GameStateListener;
 
 /**
  * Orchestrates the lifecycle of a single game session and fans out state/events.
@@ -26,19 +25,12 @@ public class GameSessionService implements TurnTimer.Listener {
     private final TurnTimer turnTimer;
 
     private GameState currentGameState;
-    private final List<GameStateListener> stateListeners = new ArrayList<>();
     private final List<GameEventListener> eventListeners = new ArrayList<>();
 
     public GameSessionService(GameController gameController, TurnTimer turnTimer) {
         this.gameController = gameController;
         this.turnTimer = turnTimer;
         this.turnTimer.addListener(this);
-    }
-
-    public void addStateListener(GameStateListener listener) {
-        if (listener != null) {
-            stateListeners.add(listener);
-        }
     }
 
     public void addEventListener(GameEventListener listener) {
@@ -66,7 +58,6 @@ public class GameSessionService implements TurnTimer.Listener {
         } else {
             turnTimer.reset();
         }
-        stateListeners.forEach(l -> l.onGameStateUpdate(currentGameState));
         publish(GameEventKind.gameStarted, null);
         return currentGameState;
     }
@@ -83,8 +74,6 @@ public class GameSessionService implements TurnTimer.Listener {
         GameStatus newStatus = outcome.status();
         GamePlayer nextTurn = outcome.nextTurn();
 
-        // GameState is mutated in submitGuess; notify listeners with updated state.
-        stateListeners.forEach(l -> l.onGameStateUpdate(currentGameState));
         publish(GameEventKind.gameStateUpdated, outcome);
 
         if (newStatus == GameStatus.finished) {
@@ -118,8 +107,6 @@ public class GameSessionService implements TurnTimer.Listener {
         currentGameState.applyWinnerKnowledge(winnerKnewWord);
         GameStatus after = currentGameState.getStatus();
 
-        stateListeners.forEach(l -> l.onGameStateUpdate(currentGameState));
-
         if (after == GameStatus.finished || after == GameStatus.soloChase) {
             publish(GameEventKind.gameFinished, winnerKnewWord);
             turnTimer.stop();
@@ -151,7 +138,6 @@ public class GameSessionService implements TurnTimer.Listener {
         }
         currentGameState.handleTimeout(player);
         turnTimer.stop();
-        stateListeners.forEach(l -> l.onGameStateUpdate(currentGameState));
         publish(GameEventKind.timerExpired, player);
         publish(GameEventKind.gameFinished, null);
     }
@@ -177,8 +163,10 @@ public class GameSessionService implements TurnTimer.Listener {
                 : null;
         int timerSeconds = state.getConfig().timerDuration() != null ? state.getConfig().timerDuration().seconds() : 0;
         String targetWord = null;
-        if (state.getConfig().playerOne() != null && state.wordFor(state.getConfig().playerOne()) != null) {
-            targetWord = state.wordFor(state.getConfig().playerOne()).word();
+        // Only reveal in solo and only after game finishes (for loss messaging).
+        if (state.getConfig().mode() == GameMode.solo && state.getStatus() == GameStatus.finished) {
+            var targetChoice = state.wordFor(state.getConfig().playerOne());
+            targetWord = targetChoice != null ? targetChoice.word() : null;
         }
         var guesses = state.getGuesses().stream()
                 .map(g -> new controller.events.GuessView(

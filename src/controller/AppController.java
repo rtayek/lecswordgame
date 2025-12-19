@@ -15,7 +15,6 @@ import util.PersistenceService;
 import controller.api.Navigation;
 import controller.events.GameEvent;
 import controller.events.GameEventListener;
-import controller.api.GameStateListener;
 
 public class AppController {
 
@@ -31,14 +30,10 @@ public class AppController {
         this.turnTimer = turnTimer;
     }
     
-    public void addGameStateListener(GameStateListener listener) {
-        gameSessionService.addStateListener(listener);
-    }
-    
     public void addGameEventListener(GameEventListener listener) {
         gameSessionService.addEventListener(listener);
     }
-    
+
     public void setNavigation(Navigation navigation) {
         navigationCoordinator.setNavigation(navigation);
     }
