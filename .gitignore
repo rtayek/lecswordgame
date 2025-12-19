@@ -30,6 +30,8 @@ gradle-app.setting
 # Java
 # Compiled class files
 *.class
+# Eclipse output directories
+/bin-test/
 
 # Package Files
 # Comment out desired files to track

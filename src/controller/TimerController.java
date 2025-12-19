@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import javax.swing.Timer;
-import model.Records.GamePlayer;
+import model.GamePlayer;
 
 /**
  * Swing-backed implementation of TurnTimer.

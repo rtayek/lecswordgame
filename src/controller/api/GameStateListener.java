@@ -1,4 +1,4 @@
-package view.listeners;
+package controller.api;
 
 import model.GameState;
 

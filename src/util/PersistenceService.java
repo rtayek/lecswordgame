@@ -9,11 +9,11 @@ import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
 
-import model.Records.GameLogEntry;
-import model.Records.PlayerProfile;
+import model.GameLogEntry;
+import model.PlayerProfile;
 import model.enums.Difficulty;
 import model.enums.WordLength;
-import model.Records.HardWordEntry;
+import model.HardWordEntry;
 
 public class PersistenceService {
 

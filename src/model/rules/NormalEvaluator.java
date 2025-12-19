@@ -1,8 +1,8 @@
-package controller.evaluator;
+package model.rules;
 
 import java.util.ArrayList;
 import java.util.List;
-import model.Records.GuessResult;
+import model.GuessResult;
 import model.enums.LetterFeedback;
 
 public class NormalEvaluator implements GuessEvaluator {

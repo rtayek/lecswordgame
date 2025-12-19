@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import model.GameState;
 import model.GameState.GameConfig;
-import model.Records.GamePlayer;
-import model.Records.GuessOutcome;
-import model.Records.WordChoice;
+import model.GamePlayer;
+import model.GuessOutcome;
+import model.WordChoice;
 import model.enums.GameMode;
 import model.enums.GameStatus;
 import model.enums.WordLength;
@@ -14,7 +14,7 @@ import controller.TurnTimer;
 import controller.events.GameEvent;
 import controller.events.GameEvent.GameEventKind;
 import controller.events.GameEventListener;
-import view.listeners.GameStateListener;
+import controller.api.GameStateListener;
 
 /**
  * Orchestrates the lifecycle of a single game session and fans out state/events.
@@ -86,6 +86,9 @@ public class GameSessionService implements TurnTimer.Listener {
         if (newStatus == GameStatus.finished) {
             publish(GameEventKind.gameFinished, outcome);
             turnTimer.stop();
+        } else if (newStatus == GameStatus.awaitingWinnerKnowledge) {
+            // Pause timers while waiting for winner knowledge response.
+            turnTimer.stop();
         } else if (currentGameState.getConfig().timerDuration().isTimed() && nextTurn != null && nextTurn != player) {
             turnTimer.start(nextTurn);
         }
@@ -107,8 +110,23 @@ public class GameSessionService implements TurnTimer.Listener {
 
     public void applyWinnerKnowledge(boolean winnerKnewWord) {
         if (currentGameState == null) return;
+        GameStatus before = currentGameState.getStatus();
         currentGameState.applyWinnerKnowledge(winnerKnewWord);
-        publish(GameEventKind.gameFinished, winnerKnewWord);
+        GameStatus after = currentGameState.getStatus();
+
+        stateListeners.forEach(l -> l.onGameStateUpdate(currentGameState));
+
+        if (after == GameStatus.finished || after == GameStatus.soloContinue) {
+            publish(GameEventKind.gameFinished, winnerKnewWord);
+            turnTimer.stop();
+        } else {
+            publish(GameEventKind.gameStateUpdated, winnerKnewWord);
+            if (after == GameStatus.waitingForFinalGuess
+                    && currentGameState.getConfig().timerDuration().isTimed()
+                    && currentGameState.getCurrentTurn() != null) {
+                turnTimer.start(currentGameState.getCurrentTurn());
+            }
+        }
     }
 
     @Override

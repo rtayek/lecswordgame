@@ -1,8 +1,8 @@
-package controller.evaluator;
+package model.rules;
 
-import model.Records.GuessResult;
-import model.enums.LetterFeedback;
 import java.util.ArrayList;
+import model.GuessResult;
+import model.enums.LetterFeedback;
 
 /**
  * Expert mode returns no per-letter feedback, only counts and exact flag.

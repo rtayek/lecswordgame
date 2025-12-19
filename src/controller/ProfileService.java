@@ -2,9 +2,9 @@ package controller;
 
 import java.util.ArrayList;
 import java.util.List;
-import model.Records.GameLogEntry;
-import model.Records.HardWordEntry;
-import model.Records.PlayerProfile;
+import model.GameLogEntry;
+import model.HardWordEntry;
+import model.PlayerProfile;
 import util.PersistenceService;
 
 /**

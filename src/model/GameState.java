@@ -4,16 +4,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
-import model.Records.GamePlayer;
-import model.Records.GuessEntry;
-import model.Records.WordChoice;
+import model.GamePlayer;
+import model.GuessEntry;
+import model.WordChoice;
 import model.enums.Difficulty;
 import model.enums.FinishState;
 import model.enums.GameMode;
 import model.enums.GameStatus;
 import model.enums.TimerDuration;
 import model.enums.WordLength;
-import model.Records.GuessResult;
+import model.GuessResult;
 
 /**
  * Represents the live, mutable state of a game in progress.
@@ -88,6 +88,20 @@ public class GameState {
      * Apply post-win adjudication based on whether the winner knew the word.
      */
     public void applyWinnerKnowledge(boolean winnerKnewWord) {
+        if (status == GameStatus.awaitingWinnerKnowledge) {
+            if (provisionalWinner == null) {
+                return;
+            }
+            if (!winnerKnewWord) {
+                finishWithWinner(provisionalWinner);
+                return;
+            }
+            // Winner knew it: allow opponent a final guess
+            setStatus(GameStatus.waitingForFinalGuess);
+            switchTurn();
+            return;
+        }
+
         if (status != GameStatus.finished && status != GameStatus.soloContinue) {
             return;
         }
@@ -109,7 +123,15 @@ public class GameState {
      * Handle a timer expiration for the given player: opponent wins by forfeit.
      */
     public void handleTimeout(GamePlayer expiredPlayer) {
+        if (expiredPlayer == null) {
+            return;
+        }
         GamePlayer winner = getOpponent(expiredPlayer);
+        // Mark finish states explicitly for clarity in UI/tests.
+        setPlayerFinishState(expiredPlayer, FinishState.finishedFail);
+        if (winner != null) {
+            setPlayerFinishState(winner, FinishState.finishedSuccess);
+        }
         finishWithWinner(winner);
     }
 
@@ -135,6 +157,10 @@ public class GameState {
 
     public GamePlayer getWinner() {
         return winner;
+    }
+
+    public GamePlayer getProvisionalWinner() {
+        return provisionalWinner;
     }
 
     void setWinner(GamePlayer winner) {
@@ -196,8 +222,10 @@ public class GameState {
                     finishWithWinner(player);
                 }
             } else {
-                awaitFinalGuess();
-                switchTurn();
+                // First correct guess: capture provisional winner and wait for knowledge check
+                this.provisionalWinner = player;
+                setStatus(GameStatus.awaitingWinnerKnowledge);
+                // do not switch turn until knowledge is resolved
             }
         } else {
             if (isFinalGuess) {
@@ -214,13 +242,10 @@ public class GameState {
         setPlayerFinishState(player, state);
     }
 
-    private void awaitFinalGuess() {
-        setStatus(GameStatus.waitingForFinalGuess);
-    }
-
     void finishWithWinner(GamePlayer winner) {
         setStatus(GameStatus.finished);
         setWinner(winner);
+        provisionalWinner = null;
     }
 
     private void validateWordLength(WordChoice wordChoice) {
@@ -243,6 +268,7 @@ public class GameState {
     GamePlayer currentTurn;
     final List<GuessEntry> guesses;
     GamePlayer winner;
+    GamePlayer provisionalWinner;
     private FinishState playerOneFinishState = FinishState.notFinished;
     private FinishState playerTwoFinishState = FinishState.notFinished;
 }

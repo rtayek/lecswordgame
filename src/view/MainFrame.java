@@ -1,16 +1,17 @@
 package view;
 
 import controller.AppController;
-import model.GameState;
 import controller.WordSelectionViewData;
+import controller.api.Navigation;
+import controller.TurnTimer;
 
-import javax.swing.JFrame; // Missing Import
-import javax.swing.JPanel; // Missing Import
-import java.awt.CardLayout; // Missing Import
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import java.awt.CardLayout;
 
 class MainFrame extends JFrame implements Navigation {
     private final AppController appController;
-    private final controller.TurnTimer timerController;
+    private final TurnTimer timerController;
 
     public MainFrame(AppController appController) {
         super("Word Guessing Game");
@@ -46,7 +47,7 @@ class MainFrame extends JFrame implements Navigation {
     }
 
     @Override
-    public void showWordSelection(controller.WordSelectionViewData data) {
+    public void showWordSelection(WordSelectionViewData data) {
         if (wordSelectionPanel == null) {
             wordSelectionPanel = new WordSelectionPanel(appController, data);
             cards.add(wordSelectionPanel, cardWordSelection);
@@ -106,7 +107,7 @@ class MainFrame extends JFrame implements Navigation {
     }
     
     @Override
-    public controller.TurnTimer getTimerController() {
+    public TurnTimer getTimerController() {
         return timerController;
     }
 

@@ -1,6 +1,7 @@
 package view;
 
 import controller.AppController;
+import controller.api.Navigation;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -14,7 +15,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import model.Records.PlayerProfile;
+import model.PlayerProfile;
 import util.ResourceLoader; // Import ResourceLoader
 
 class ProfileSetupPanel extends JPanel {

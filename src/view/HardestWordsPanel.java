@@ -1,6 +1,7 @@
 package view;
 
 import controller.AppController;
+import controller.api.Navigation;
 import java.awt.BorderLayout;
 import java.util.List;
 import javax.swing.JButton;
@@ -9,7 +10,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
-import model.Records.HardWordEntry;
+import model.HardWordEntry;
 
 class HardestWordsPanel extends JPanel {
 

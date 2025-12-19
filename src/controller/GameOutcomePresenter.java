@@ -1,7 +1,7 @@
 package controller;
 
 import model.GameState;
-import model.Records.GamePlayer;
+import model.GamePlayer;
 import model.enums.FinishState;
 import model.enums.GameStatus;
 import util.SoundEffect;
@@ -43,6 +43,12 @@ public class GameOutcomePresenter {
                     name(lastGuesser)
             );
             return new OutcomeViewModel("Last Chance!", message, null, null, NextAction.SHOW_LAST_CHANCE);
+        }
+
+        if (state.getStatus() == GameStatus.awaitingWinnerKnowledge) {
+            GamePlayer winner = state.getProvisionalWinner() != null ? state.getProvisionalWinner() : state.getCurrentTurn();
+            String ask = String.format("%s, you guessed the word! Did you know this word?", name(winner));
+            return new OutcomeViewModel("Win Condition", ask, null, null, NextAction.ASK_WINNER_KNOWLEDGE);
         }
 
         if (state.getStatus() != GameStatus.finished) {

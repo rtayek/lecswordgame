@@ -3,10 +3,11 @@ package view;
 import controller.AppController;
 import controller.GameOutcomePresenter;
 import controller.TurnTimer;
+import controller.api.GameStateListener;
+import controller.api.Navigation;
 import view.OutcomeRenderer;
 import controller.events.GameEvent;
 import controller.events.GameEventListener;
-import view.listeners.GameStateListener;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import javax.swing.JButton;
@@ -14,8 +15,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-import model.Records.GamePlayer;
-import model.Records.PlayerProfile;
 import model.enums.Difficulty;
 import model.enums.GameStatus;
 import model.GameState;
@@ -34,7 +33,6 @@ class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameStateListe
         this.appController = appController;
         this.outcomePresenter = new GameOutcomePresenter();
         this.timerController = navigation.getTimerController();
-        this.player = new GamePlayer(new PlayerProfile("You", ""), true);
         
         appController.addGameStateListener(this);
         appController.addGameEventListener(this);
@@ -174,18 +172,18 @@ class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameStateListe
     }
 
     @Override
-    public void onTimeUpdated(GamePlayer player, int remainingSeconds) {
+    public void onTimeUpdated(model.GamePlayer player, int remainingSeconds) {
         var state = appController.getGameState();
-        if (state == null || player == null || !player.equals(this.player)) return; // Only update for this player
-
+        if (state == null || player == null || state.getConfig().playerOne() == null) return;
+        if (!player.equals(state.getConfig().playerOne())) return; // Only update for solo human
         updateTimerLabel(playerTimerLabel, remainingSeconds);
     }
 
     @Override
-    public void onTimeExpired(GamePlayer player) {
+    public void onTimeExpired(model.GamePlayer player) {
         var state = appController.getGameState();
-        if (state == null || player == null || !player.equals(this.player)) return; // Only update for this player
-        
+        if (state == null || player == null || state.getConfig().playerOne() == null) return;
+        if (!player.equals(state.getConfig().playerOne())) return;
         setStatus(player.profile().username() + " ran out of time!");
     }
 
@@ -211,7 +209,7 @@ class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameStateListe
     private static final long serialVersionUID = 1L;
 
     private final Navigation navigation;
-    private final GamePlayer player; // Assuming this is the solo player
+    // We track by name/state, not by GamePlayer reference to keep UI decoupled
     private final GuessGridPanel grid;
     private final KeyboardPanel keyboardPanel;
     private final JTextField guessField;

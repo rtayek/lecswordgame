@@ -2,18 +2,18 @@ package controller;
 
 import model.GameState;
 import model.GameState.GameConfig;
-import model.Records.GamePlayer;
-import model.Records.GuessEntry;
-import model.Records.GuessResult;
-import model.Records.WordChoice;
+import model.GamePlayer;
+import model.GuessEntry;
+import model.GuessOutcome;
+import model.GuessResult;
+import model.WordChoice;
 import model.enums.Difficulty;
 import model.enums.GameStatus;
 import model.enums.WordLength;
-import model.Records.GuessOutcome;
-import controller.evaluator.ExpertEvaluator;
-import controller.evaluator.GuessEvaluator;
-import controller.evaluator.HardEvaluator;
-import controller.evaluator.NormalEvaluator;
+import model.rules.ExpertEvaluator;
+import model.rules.GuessEvaluator;
+import model.rules.HardEvaluator;
+import model.rules.NormalEvaluator;
 
 public class GameController {
 

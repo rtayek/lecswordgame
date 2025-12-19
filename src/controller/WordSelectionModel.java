@@ -1,6 +1,6 @@
 package controller;
 
-import model.Records.WordChoice;
+import model.WordChoice;
 import model.enums.WordSource;
 
 /**

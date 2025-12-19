@@ -1,24 +1,23 @@
 package controller;
 
-import controller.TimerController;
-import controller.TurnTimer;
-import model.Records.GamePlayer;
-import model.Records.PlayerProfile;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.Test;
+
+import model.GamePlayer;
+import model.PlayerProfile;
+
 /**
- * Smoke test to ensure TurnTimer fans out events to multiple listeners.
+ * JUnit 5 smoke test to ensure TurnTimer fans out events to multiple listeners.
  */
-public final class TurnTimerTest {
+class TurnTimerTest {
 
-    public static void main(String[] args) throws Exception {
-        shouldNotifyAllListeners();
-        System.out.println("TurnTimerTest passed");
-    }
-
-    private static void shouldNotifyAllListeners() throws Exception {
+    @Test
+    void shouldNotifyAllListeners() throws Exception {
         TurnTimer timer = new TimerController();
         var player = new GamePlayer(new PlayerProfile("P1", ""), true);
 
@@ -53,12 +52,7 @@ public final class TurnTimerTest {
         timer.setTimeForPlayer(player, 1);
         timer.start(player);
 
-        // Wait for expiration; swing timer fires on EDT, so give a small window
-        if (!expireLatch.await(2, TimeUnit.SECONDS)) {
-            throw new AssertionError("Listeners did not receive expiry");
-        }
-        if (updateLatch.getCount() == 2) {
-            throw new AssertionError("Listeners did not receive any update");
-        }
+        assertTrue(expireLatch.await(2, TimeUnit.SECONDS), "Listeners should receive expiry");
+        assertNotEquals(2, updateLatch.getCount(), "Listeners should receive at least one update");
     }
 }

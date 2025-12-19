@@ -17,7 +17,7 @@ import javax.swing.JTextField;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.border.EmptyBorder;
-import model.Records.WordChoice;
+import model.WordChoice;
 import model.enums.WordSource;
 import util.ResourceLoader; // Added: Import ResourceLoader
 

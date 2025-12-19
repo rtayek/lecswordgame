@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import javax.swing.JButton;
 import javax.swing.JPanel;
-import model.Records.GuessResult;
+import model.GuessResult;
 import model.enums.Difficulty;
 import model.enums.LetterFeedback;
 

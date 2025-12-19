@@ -1,8 +1,8 @@
 package controller;
 
 import model.GameState.GameConfig;
-import model.Records.GamePlayer;
-import model.Records.WordChoice;
+import model.GamePlayer;
+import model.WordChoice;
 import model.enums.GameMode;
 
 /**

@@ -1,6 +1,6 @@
 package controller;
 
-import model.Records.GamePlayer;
+import model.GamePlayer;
 
 /**
  * Domain-facing timer abstraction for per-turn countdowns.

@@ -1,8 +1,8 @@
 package controller;
 
 import model.GameState.GameConfig;
-import model.Records.GamePlayer;
-import view.Navigation;
+import model.GamePlayer;
+import controller.api.Navigation;
 
 /**
  * Thin wrapper around Navigation to centralize UI transitions.

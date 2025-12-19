@@ -6,7 +6,7 @@ import java.awt.Font;
 import java.awt.GridLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import model.Records.GuessResult;
+import model.GuessResult;
 import model.enums.Difficulty;
 import model.enums.LetterFeedback;
 

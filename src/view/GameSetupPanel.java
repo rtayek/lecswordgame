@@ -1,6 +1,7 @@
 package view;
 
 import controller.AppController;
+import controller.api.Navigation;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
@@ -8,9 +9,6 @@ import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import model.GameState.GameConfig;
-import model.Records.GamePlayer;
-import model.Records.PlayerProfile;
 import model.enums.*;
 
 class GameSetupPanel extends JPanel {
@@ -56,19 +54,18 @@ class GameSetupPanel extends JPanel {
 
         var multiplayer = new JButton("Start Multiplayer");
         multiplayer.addActionListener(e -> {
-            var playerOne = new GamePlayer(new PlayerProfile("Player 1", ""), true); // Placeholder profiles
-            var playerTwo = new GamePlayer(new PlayerProfile("Player 2", ""), true);
-
-            var config = createConfig(GameMode.multiplayer, playerOne, playerTwo);
-            appController.requestNewGame(config);
+            appController.startMultiplayerGame("Player 1", "Player 2",
+                    (Difficulty) difficultyComboBox.getSelectedItem(),
+                    (WordLength) wordLengthComboBox.getSelectedItem(),
+                    (TimerDuration) timerDurationComboBox.getSelectedItem());
         });
 
         var solo = new JButton("Start Solo");
         solo.addActionListener(e -> {
-            var player = new GamePlayer(new PlayerProfile("You", ""), true); // Human player
-            var computerPlayer = new GamePlayer(new PlayerProfile("Computer", ""), false); // Computer player
-            var config = createConfig(GameMode.solo, player, computerPlayer);
-            appController.requestNewGame(config);
+            appController.startSoloGame("You",
+                    (Difficulty) difficultyComboBox.getSelectedItem(),
+                    (WordLength) wordLengthComboBox.getSelectedItem(),
+                    (TimerDuration) timerDurationComboBox.getSelectedItem());
         });
 
         gameButtonsPanel.add(multiplayer);
@@ -82,13 +79,5 @@ class GameSetupPanel extends JPanel {
         add(back, BorderLayout.SOUTH);
     }
     
-    private GameConfig createConfig(GameMode mode, GamePlayer playerOne, GamePlayer playerTwo) {
-        WordLength selectedWordLength = (WordLength) wordLengthComboBox.getSelectedItem();
-        Difficulty selectedDifficulty = (Difficulty) difficultyComboBox.getSelectedItem();
-        TimerDuration selectedTimerDuration = (TimerDuration) timerDurationComboBox.getSelectedItem();
-        
-        return new GameConfig(mode, selectedDifficulty, selectedWordLength, selectedTimerDuration, playerOne, playerTwo);
-    }
-
     static final long serialVersionUID = 1L;
 }

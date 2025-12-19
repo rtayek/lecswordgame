@@ -3,10 +3,11 @@ package view;
 import controller.AppController;
 import controller.GameOutcomePresenter;
 import controller.TurnTimer;
+import controller.api.GameStateListener;
+import controller.api.Navigation;
 import view.OutcomeRenderer;
 import controller.events.GameEvent;
 import controller.events.GameEventListener;
-import view.listeners.GameStateListener;
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import javax.swing.JButton;
@@ -141,7 +142,8 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
             case gameStateUpdated -> {
                 // No-op here; rows are added in handleGuess outcome
                 var state = event.snapshot();
-                if (state != null && state.getStatus() == model.enums.GameStatus.waitingForFinalGuess) {
+                if (state != null && (state.getStatus() == model.enums.GameStatus.waitingForFinalGuess
+                        || state.getStatus() == model.enums.GameStatus.awaitingWinnerKnowledge)) {
                     onGameEnd(state, null);
                 } else {
                     updateCurrentPlayerLabel(state);
@@ -165,7 +167,8 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
             }
 
             if (outcome.status() == model.enums.GameStatus.waitingForFinalGuess
-                    || outcome.status() == model.enums.GameStatus.finished) {
+                    || outcome.status() == model.enums.GameStatus.finished
+                    || outcome.status() == model.enums.GameStatus.awaitingWinnerKnowledge) {
                 onGameEnd(appController.getGameState(), null);
             } else {
                 updateCurrentPlayerLabel(appController.getGameState());
@@ -241,7 +244,7 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
     }
 
     @Override
-    public void onTimeUpdated(model.Records.GamePlayer player, int remainingSeconds) {
+    public void onTimeUpdated(model.GamePlayer player, int remainingSeconds) {
         var state = appController.getGameState();
         if (state == null) return;
         
@@ -250,7 +253,7 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameSta
     }
 
     @Override
-    public void onTimeExpired(model.Records.GamePlayer player) {
+    public void onTimeExpired(model.GamePlayer player) {
         var state = appController.getGameState();
         if (state == null) return;
 

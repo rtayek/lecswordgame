@@ -4,19 +4,19 @@ import java.util.ArrayList;
 import java.util.List;
 import model.GameState;
 import model.GameState.GameConfig;
-import model.Records.GameLogEntry;
-import model.Records.GamePlayer;
-import model.Records.GuessOutcome;
-import model.Records.HardWordEntry;
-import model.Records.PlayerProfile;
-import model.Records.WordChoice;
+import model.GameLogEntry;
+import model.GamePlayer;
+import model.GuessOutcome;
+import model.HardWordEntry;
+import model.PlayerProfile;
+import model.WordChoice;
 import model.enums.GameMode;
 import model.enums.WordLength;
 import util.PersistenceService;
-import view.Navigation;
+import controller.api.Navigation;
 import controller.events.GameEvent;
 import controller.events.GameEventListener;
-import view.listeners.GameStateListener;
+import controller.api.GameStateListener;
 
 public class AppController {
 
@@ -129,5 +129,21 @@ public class AppController {
         var name = opponent != null && opponent.profile() != null ? opponent.profile().username() : "Player";
         boolean isMultiplayer = config.mode() == GameMode.multiplayer;
         return new WordSelectionViewData(name, config.wordLength().length(), isMultiplayer, isPlayerOneTurn);
+    }
+
+    public void startMultiplayerGame(String playerOneName, String playerTwoName, model.enums.Difficulty difficulty,
+                                     model.enums.WordLength wordLength, model.enums.TimerDuration timer) {
+        var p1 = new model.GamePlayer(new model.PlayerProfile(playerOneName, ""), true);
+        var p2 = new model.GamePlayer(new model.PlayerProfile(playerTwoName, ""), true);
+        var config = new GameConfig(model.enums.GameMode.multiplayer, difficulty, wordLength, timer, p1, p2);
+        requestNewGame(config);
+    }
+
+    public void startSoloGame(String playerName, model.enums.Difficulty difficulty,
+                              model.enums.WordLength wordLength, model.enums.TimerDuration timer) {
+        var human = new model.GamePlayer(new model.PlayerProfile(playerName, ""), true);
+        var cpu = new model.GamePlayer(new model.PlayerProfile("Computer", ""), false);
+        var config = new GameConfig(model.enums.GameMode.solo, difficulty, wordLength, timer, human, cpu);
+        requestNewGame(config);
     }
 }
