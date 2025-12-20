@@ -20,12 +20,8 @@ import java.awt.Color;
 import javax.swing.JOptionPane;
 import javax.swing.ImageIcon;
 
-class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameEventListener {
+class MultiplayerGamePanel extends BaseGamePanel {
 
-    private final AppController appController;
-    private final Navigation navigation;
-    private final TurnTimer timerController;
-    private final GameOutcomePresenter outcomePresenter;
     private final GuessGridPanel leftGrid;
     private final GuessGridPanel rightGrid;
     private final JLabel currentPlayerLabel;
@@ -33,22 +29,10 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameEve
     private final JLabel playerTwoLabel;
     private final JLabel playerOneTimerLabel;
     private final JLabel playerTwoTimerLabel;
-    private final JTextField guessField;
-    private final KeyboardPanel keyboardPanel;
-    private final JLabel statusLabel;
-    private final JButton submitButton;
-    private GameUiModel lastModel;
 
     MultiplayerGamePanel(Navigation navigation, AppController appController) {
-        this.navigation = navigation;
-        this.appController = appController;
-        this.timerController = navigation.getTimerController();
-        this.outcomePresenter = new GameOutcomePresenter();
-        
-        appController.addGameEventListener(this);
-        timerController.addListener(this);
+        super(navigation, appController);
 
-        setLayout(new BorderLayout(8, 8));
         setBackground(new java.awt.Color(0xF4F1DE)); // warm beige
 
         currentPlayerLabel = new JLabel("Current player: (none)");
@@ -82,118 +66,83 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameEve
 
         add(gridContainer, BorderLayout.CENTER);
 
-        guessField = new JTextField(10);
-        keyboardPanel = new KeyboardPanel(c -> {
-            guessField.setText(guessField.getText() + c);
-        });
-
-        statusLabel = new JLabel(" ");
-        var bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.add(statusLabel, BorderLayout.NORTH);
-        bottomPanel.add(guessField, BorderLayout.CENTER);
-        bottomPanel.add(keyboardPanel, BorderLayout.SOUTH);
-        add(bottomPanel, BorderLayout.SOUTH);
-
         var controls = new JPanel();
-
-        submitButton = new JButton("Submit Guess");
-        submitButton.addActionListener(e -> handleGuess());
+        controls.add(submitButton);
 
         var backspace = new JButton("Backspace");
         backspace.addActionListener(e -> handleBackspace());
-
+        
         var enter = new JButton("Enter");
         enter.addActionListener(e -> handleGuess());
 
         var back = new JButton("Back");
         back.addActionListener(e -> navigation.showLanding());
 
-        controls.add(submitButton);
         controls.add(backspace);
         controls.add(enter);
         controls.add(back);
         add(controls, BorderLayout.WEST);
     }
+    
+    @Override
+    protected void onGameStarted(GameUiModel model) {
+        super.onGameStarted(model);
+        leftGrid.clearRows();
+        rightGrid.clearRows();
+        if (lastModel != null) {
+            updateTimerLabel(playerOneTimerLabel, lastModel.timerDurationSeconds());
+            updateTimerLabel(playerTwoTimerLabel, lastModel.timerDurationSeconds());
+        }
+    }
 
     @Override
-    public void onGameEvent(GameEvent event) {
-        switch (event.kind()) {
-            case gameStarted -> {
-                lastModel = event.view();
-                leftGrid.clearRows();
-                rightGrid.clearRows();
-                setStatus(" ");
-                guessField.setText("");
-                guessField.setEnabled(true);
-                keyboardPanel.setEnabled(true);
-                submitButton.setEnabled(true);
-                if (lastModel != null) {
-                    updateTimerLabel(playerOneTimerLabel, lastModel.timerDurationSeconds());
-                    updateTimerLabel(playerTwoTimerLabel, lastModel.timerDurationSeconds());
-                }
-                updateCurrentPlayerLabelFromModel();
-            }
-            case gameStateUpdated -> {
-                // No-op here; rows are added in handleGuess outcome
-                lastModel = event.view();
-                if (lastModel != null && ("waitingForFinalGuess".equalsIgnoreCase(lastModel.status())
-                        || "awaitingWinnerKnowledge".equalsIgnoreCase(lastModel.status()))) {
-                    onGameEnd(lastModel, null);
-                } else {
-                    updateCurrentPlayerLabelFromModel();
-                }
-            }
-            case gameFinished -> {
-                lastModel = event.view();
-                onGameEnd(lastModel, null);
-            }
-            default -> { }
+    void onGameFinished(GameUiModel uiModel, Boolean winnerKnewWord) {
+        var vm = outcomePresenter.build(uiModel, winnerKnewWord);
+        if (vm == null) {
+            return;
+        }
+
+        if (vm.nextAction() == GameOutcomePresenter.NextAction.SHOW_LAST_CHANCE) {
+            JOptionPane.showMessageDialog(this, vm.message(), vm.title(), JOptionPane.INFORMATION_MESSAGE);
+            submitButton.setEnabled(true);
+            guessField.setEnabled(true);
+            keyboardPanel.setEnabled(true);
+            updateCurrentPlayerLabelFromModel();
+            return;
+        }
+
+        var toShow = vm;
+        Boolean finalWinnerKnew = winnerKnewWord;
+        if (vm.nextAction() == GameOutcomePresenter.NextAction.ASK_WINNER_KNOWLEDGE) {
+            int choice = JOptionPane.showConfirmDialog(this, vm.message(), vm.title(), JOptionPane.YES_NO_OPTION);
+            finalWinnerKnew = (choice == JOptionPane.YES_OPTION);
+            appController.reportWinnerKnowledge(finalWinnerKnew);
+            toShow = outcomePresenter.build(uiModel, finalWinnerKnew);
+        }
+
+        if (toShow == null) {
+            return;
+        }
+
+        OutcomeRenderer.render(this, toShow);
+        navigation.showGameSetup();
+    }
+
+    @Override
+    void addGuessRow(model.GamePlayer player, model.GuessResult result, Difficulty difficulty) {
+        boolean isPlayerOne = lastModel != null && lastModel.playerOne() != null
+                && player != null
+                && player.profile() != null
+                && lastModel.playerOne().equals(player.profile().username());
+        if (isPlayerOne) {
+            leftGrid.addGuessRow(new GuessRowPanel(result, difficulty));
+        } else {
+            rightGrid.addGuessRow(new GuessRowPanel(result, difficulty));
         }
     }
-
-    private void handleGuess() {
-        try {
-            var outcome = appController.submitGuess(guessField.getText());
-            var result = outcome.entry().result();
-            var difficulty = lastModel != null ? lastModel.difficulty() : "normal";
-
-            // Determine target grid by player name
-            boolean isPlayerOne = lastModel != null && lastModel.playerOne() != null
-                    && outcome.entry().player() != null
-                    && outcome.entry().player().profile() != null
-                    && lastModel.playerOne().equals(outcome.entry().player().profile().username());
-            if (isPlayerOne) {
-                leftGrid.addGuessRow(new GuessRowPanel(result, mapDifficulty(difficulty)));
-            } else {
-                rightGrid.addGuessRow(new GuessRowPanel(result, mapDifficulty(difficulty)));
-            }
-
-            var statusName = outcome.status().name();
-            if ("waitingForFinalGuess".equalsIgnoreCase(statusName)
-                    || "finished".equalsIgnoreCase(statusName)
-                    || "awaitingWinnerKnowledge".equalsIgnoreCase(statusName)) {
-                onGameEnd(lastModel, null);
-            } else {
-                updateCurrentPlayerLabelFromModel();
-            }
-            guessField.setText("");
-        } catch (Exception e) {
-            setStatus(e.getMessage());
-        }
-    }
-
-    private void handleBackspace() {
-        var text = guessField.getText();
-        if (text != null && !text.isEmpty()) {
-            guessField.setText(text.substring(0, text.length() - 1));
-        }
-    }
-
-    private void setStatus(String text) {
-        statusLabel.setText(text);
-    }
-
-    private void updateCurrentPlayerLabelFromModel() {
+    
+    @Override
+    void updateCurrentPlayerLabelFromModel() {
         if (lastModel == null) {
             currentPlayerLabel.setText("Current player: (none)");
             submitButton.setEnabled(false);
@@ -226,16 +175,6 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameEve
         keyboardPanel.setEnabled(true);
     }
 
-    void onShow() {
-        // This method is now only for visibility changes, not state initialization.
-        updateCurrentPlayerLabelFromModel();
-        if (lastModel != null) {
-            // We cannot fetch per-player remaining without state; display configured duration.
-            updateTimerLabel(playerOneTimerLabel, lastModel.timerDurationSeconds());
-            updateTimerLabel(playerTwoTimerLabel, lastModel.timerDurationSeconds());
-        }
-    }
-
     @Override
     public void onTimeUpdated(model.GamePlayer player, int remainingSeconds) {
         if (lastModel == null || player == null || player.profile() == null) return;
@@ -252,63 +191,4 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameEve
         String name = player.profile().username();
         setStatus((name == null || name.isBlank() ? "Player" : name) + " ran out of time!");
     }
-    
-    private void updateTimerLabel(JLabel label, int totalSeconds) {
-        int minutes = totalSeconds / 60;
-        int seconds = totalSeconds % 60;
-        label.setText(String.format("%02d:%02d", minutes, seconds));
-
-        boolean isTimerRed = false;
-        if (lastModel != null && lastModel.timerDurationSeconds() > 0) {
-            int gameDuration = lastModel.timerDurationSeconds();
-            if (gameDuration >= 3 * 60 && totalSeconds < 60) {
-                isTimerRed = true;
-            } else if (gameDuration == 1 * 60 && totalSeconds < 30) {
-                isTimerRed = true;
-            }
-        }
-        label.setForeground(isTimerRed ? Color.RED : Color.BLACK);
-    }
-    
-    private void onGameEnd(GameUiModel uiModel, Boolean winnerKnewWord) {
-        var vm = outcomePresenter.buildMultiplayer(uiModel, winnerKnewWord);
-        if (vm == null) {
-            return;
-        }
-
-        if (vm.nextAction() == GameOutcomePresenter.NextAction.SHOW_LAST_CHANCE) {
-            JOptionPane.showMessageDialog(this, vm.message(), vm.title(), JOptionPane.INFORMATION_MESSAGE);
-            submitButton.setEnabled(true);
-            guessField.setEnabled(true);
-            keyboardPanel.setEnabled(true);
-            updateCurrentPlayerLabelFromModel();
-            return;
-        }
-
-        var toShow = vm;
-        Boolean finalWinnerKnew = winnerKnewWord;
-        if (vm.nextAction() == GameOutcomePresenter.NextAction.ASK_WINNER_KNOWLEDGE) {
-            int choice = JOptionPane.showConfirmDialog(this, vm.message(), vm.title(), JOptionPane.YES_NO_OPTION);
-            finalWinnerKnew = (choice == JOptionPane.YES_OPTION);
-            appController.reportWinnerKnowledge(finalWinnerKnew);
-            toShow = outcomePresenter.buildMultiplayer(uiModel, finalWinnerKnew);
-        }
-
-        if (toShow == null) {
-            return;
-        }
-
-        OutcomeRenderer.render(this, toShow);
-        navigation.showGameSetup();
-    }
-
-    private Difficulty mapDifficulty(String value) {
-        try {
-            return Difficulty.valueOf(value);
-        } catch (Exception e) {
-            return Difficulty.normal;
-        }
-    }
-
-    private static final long serialVersionUID = 1L;
 }
