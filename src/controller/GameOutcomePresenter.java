@@ -32,7 +32,7 @@ public class GameOutcomePresenter {
     public OutcomeViewModel buildMultiplayer(controller.events.GameUiModel state, Boolean winnerKnewWord) {
         if (state == null) return null;
 
-        if (state.status() == GameStatus.waitingForFinalGuess) {
+        if ("waitingForFinalGuess".equalsIgnoreCase(state.status())) {
             String lastGuesser = state.provisionalWinner() != null ? state.provisionalWinner() : state.currentPlayer();
             String opponent = state.currentPlayer();
             String message = String.format(
@@ -44,13 +44,13 @@ public class GameOutcomePresenter {
             return new OutcomeViewModel("Last Chance!", message, null, null, NextAction.SHOW_LAST_CHANCE);
         }
 
-        if (state.status() == GameStatus.awaitingWinnerKnowledge) {
+        if ("awaitingWinnerKnowledge".equalsIgnoreCase(state.status())) {
             String winner = state.provisionalWinner() != null ? state.provisionalWinner() : state.currentPlayer();
             String ask = String.format("%s, you guessed the word! Did you know this word?", safeName(winner));
             return new OutcomeViewModel("Win Condition", ask, null, null, NextAction.ASK_WINNER_KNOWLEDGE);
         }
 
-        if (state.status() != GameStatus.finished) {
+        if (!"finished".equalsIgnoreCase(state.status())) {
             return null;
         }
 
@@ -81,7 +81,7 @@ public class GameOutcomePresenter {
      * @param playerKnewWord optional flag; null means we still need to ask
      */
     public OutcomeViewModel buildSolo(controller.events.GameUiModel state, Boolean playerKnewWord) {
-        if (state == null || state.status() != GameStatus.finished) {
+        if (state == null || !"finished".equalsIgnoreCase(state.status())) {
             return null;
         }
         String winner = state.winner();

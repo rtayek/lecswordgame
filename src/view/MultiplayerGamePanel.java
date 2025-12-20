@@ -15,7 +15,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-import model.enums.*;
+import model.enums.Difficulty;
 import java.awt.Color;
 import javax.swing.JOptionPane;
 import javax.swing.ImageIcon;
@@ -136,8 +136,8 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameEve
             case gameStateUpdated -> {
                 // No-op here; rows are added in handleGuess outcome
                 lastModel = event.view();
-                if (lastModel != null && (lastModel.status() == model.enums.GameStatus.waitingForFinalGuess
-                        || lastModel.status() == model.enums.GameStatus.awaitingWinnerKnowledge)) {
+                if (lastModel != null && ("waitingForFinalGuess".equalsIgnoreCase(lastModel.status())
+                        || "awaitingWinnerKnowledge".equalsIgnoreCase(lastModel.status()))) {
                     onGameEnd(lastModel, null);
                 } else {
                     updateCurrentPlayerLabelFromModel();
@@ -168,9 +168,10 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameEve
                 rightGrid.addGuessRow(new GuessRowPanel(result, mapDifficulty(difficulty)));
             }
 
-            if (outcome.status() == model.enums.GameStatus.waitingForFinalGuess
-                    || outcome.status() == model.enums.GameStatus.finished
-                    || outcome.status() == model.enums.GameStatus.awaitingWinnerKnowledge) {
+            var statusName = outcome.status().name();
+            if ("waitingForFinalGuess".equalsIgnoreCase(statusName)
+                    || "finished".equalsIgnoreCase(statusName)
+                    || "awaitingWinnerKnowledge".equalsIgnoreCase(statusName)) {
                 onGameEnd(lastModel, null);
             } else {
                 updateCurrentPlayerLabelFromModel();
@@ -201,7 +202,7 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameEve
             return;
         }
 
-        if (lastModel.status() == GameStatus.finished) {
+        if ("finished".equalsIgnoreCase(lastModel.status())) {
             var winnerName = lastModel.winner();
             if (winnerName == null) {
                 currentPlayerLabel.setText("Game finished: It's a Tie!");

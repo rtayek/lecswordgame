@@ -171,7 +171,7 @@ public class GameSessionService implements TurnTimer.Listener {
         var keyboard = buildKeyboardView(state);
         return new GameUiModel(
                 state.getId(),
-                state.getStatus(),
+                state.getStatus().name(),
                 state.getConfig().difficulty().name().toLowerCase(),
                 name(state.getCurrentTurn()),
                 winnerName,

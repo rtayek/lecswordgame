@@ -16,7 +16,6 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import model.enums.Difficulty;
-import model.enums.GameStatus;
 
 import java.awt.Color;
 import javax.swing.JOptionPane;
@@ -113,7 +112,7 @@ class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameEventListe
                 setStatus(result.correctLetterCount() + " letters are correct.");
             }
 
-            if (outcome.status() == model.enums.GameStatus.finished) {
+            if ("finished".equalsIgnoreCase(outcome.status().name())) {
                 onGameFinished(lastModel, null);
             }
             guessField.setText("");

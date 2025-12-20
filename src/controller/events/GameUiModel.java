@@ -8,7 +8,7 @@ import model.enums.GameStatus;
  */
 public record GameUiModel(
         String gameId,
-        GameStatus status,
+        String status,
         String difficulty,
         String currentPlayer,
         String winner,
