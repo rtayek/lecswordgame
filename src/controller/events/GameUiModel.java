@@ -1,7 +1,6 @@
 package controller.events;
 
 import java.util.List;
-import model.enums.Difficulty;
 import model.enums.GameStatus;
 
 /**
@@ -10,7 +9,7 @@ import model.enums.GameStatus;
 public record GameUiModel(
         String gameId,
         GameStatus status,
-        Difficulty difficulty,
+        String difficulty,
         String currentPlayer,
         String winner,
         String provisionalWinner,

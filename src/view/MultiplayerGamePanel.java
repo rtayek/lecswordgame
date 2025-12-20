@@ -155,7 +155,7 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameEve
         try {
             var outcome = appController.submitGuess(guessField.getText());
             var result = outcome.entry().result();
-            var difficulty = lastModel != null ? lastModel.difficulty() : model.enums.Difficulty.normal;
+            var difficulty = lastModel != null ? lastModel.difficulty() : "normal";
 
             // Determine target grid by player name
             boolean isPlayerOne = lastModel != null && lastModel.playerOne() != null
@@ -163,9 +163,9 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameEve
                     && outcome.entry().player().profile() != null
                     && lastModel.playerOne().equals(outcome.entry().player().profile().username());
             if (isPlayerOne) {
-                leftGrid.addGuessRow(new GuessRowPanel(result, difficulty));
+                leftGrid.addGuessRow(new GuessRowPanel(result, mapDifficulty(difficulty)));
             } else {
-                rightGrid.addGuessRow(new GuessRowPanel(result, difficulty));
+                rightGrid.addGuessRow(new GuessRowPanel(result, mapDifficulty(difficulty)));
             }
 
             if (outcome.status() == model.enums.GameStatus.waitingForFinalGuess
@@ -299,6 +299,14 @@ class MultiplayerGamePanel extends JPanel implements TurnTimer.Listener, GameEve
 
         OutcomeRenderer.render(this, toShow);
         navigation.showGameSetup();
+    }
+
+    private Difficulty mapDifficulty(String value) {
+        try {
+            return Difficulty.valueOf(value);
+        } catch (Exception e) {
+            return Difficulty.normal;
+        }
     }
 
     private static final long serialVersionUID = 1L;

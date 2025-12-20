@@ -101,12 +101,13 @@ class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameEventListe
         try {
             var outcome = appController.submitGuess(guessField.getText());
             var result = outcome.entry().result();
-            var difficulty = lastModel != null ? lastModel.difficulty() : model.enums.Difficulty.normal;
-            grid.addGuessRow(new GuessRowPanel(result, difficulty));
+            var difficulty = lastModel != null ? lastModel.difficulty() : "normal";
+            var diffEnum = mapDifficulty(difficulty);
+            grid.addGuessRow(new GuessRowPanel(result, diffEnum));
 
             if (result.exactMatch()) {
                 setStatus("You solved it!");
-            } else if (difficulty == Difficulty.expert) {
+            } else if (diffEnum == Difficulty.expert) {
                 setStatus("Correct letters: " + result.correctLetterCount());
             } else {
                 setStatus(result.correctLetterCount() + " letters are correct.");
@@ -206,4 +207,16 @@ class SoloGamePanel extends JPanel implements TurnTimer.Listener, GameEventListe
     private final JTextField guessField;
     private final JLabel statusLabel;
     private final JLabel playerTimerLabel;
+
+    private Difficulty mapDifficulty(String value) {
+        try {
+            return Difficulty.valueOf(value);
+        } catch (Exception e) {
+            return Difficulty.normal;
+        }
+    }
+}
+
+enum DifficultyView {
+    normal, hard, expert
 }

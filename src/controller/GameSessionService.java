@@ -166,13 +166,13 @@ public class GameSessionService implements TurnTimer.Listener {
                 .map(g -> new controller.events.GuessView(
                         name(g.player()),
                         state.getConfig().playerOne() != null && g.player().equals(state.getConfig().playerOne()),
-                        g.result()))
+                        toView(g.result())))
                 .toList();
         var keyboard = buildKeyboardView(state);
         return new GameUiModel(
                 state.getId(),
                 state.getStatus(),
-                state.getConfig().difficulty(),
+                state.getConfig().difficulty().name().toLowerCase(),
                 name(state.getCurrentTurn()),
                 winnerName,
                 provisional,
@@ -241,5 +241,25 @@ public class GameSessionService implements TurnTimer.Listener {
             case "absent" -> 1;
             default -> 0; // "used"
         };
+    }
+
+    private controller.events.GuessResultView toView(model.GuessResult result) {
+        var feedbackView = result.feedback().stream()
+                .map(fb -> {
+                    if (fb == null) return controller.events.LetterFeedbackView.unused;
+                    return switch (fb) {
+                        case correct -> controller.events.LetterFeedbackView.correct;
+                        case present -> controller.events.LetterFeedbackView.present;
+                        case notPresent -> controller.events.LetterFeedbackView.absent;
+                        default -> controller.events.LetterFeedbackView.unused;
+                    };
+                })
+                .toList();
+        return new controller.events.GuessResultView(
+                result.guess(),
+                java.util.List.copyOf(feedbackView),
+                result.correctLetterCount(),
+                result.exactMatch()
+        );
     }
 }
