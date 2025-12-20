@@ -3,7 +3,7 @@ package view;
 import javax.swing.ImageIcon;
 import javax.swing.JComponent;
 import javax.swing.JOptionPane;
-import controller.GameOutcomePresenter.OutcomeViewModel;
+import controller.OutcomeViewModel;
 import util.ResourceLoader;
 
 /**

@@ -19,6 +19,8 @@ import model.enums.Difficulty;
 
 import java.awt.Color;
 import javax.swing.JOptionPane;
+import controller.NextAction;
+import controller.OutcomeViewModel;
 
 class SoloGamePanel extends BaseGamePanel {
 
@@ -76,7 +78,7 @@ class SoloGamePanel extends BaseGamePanel {
 
         var toShow = vm;
         Boolean finalKnew = playerKnewWord;
-        if (vm.nextAction() == GameOutcomePresenter.NextAction.ASK_WINNER_KNOWLEDGE) {
+        if (vm.nextAction() == NextAction.ASK_WINNER_KNOWLEDGE) {
             int choice = JOptionPane.showConfirmDialog(this, vm.message(), vm.title(), JOptionPane.YES_NO_OPTION);
             finalKnew = (choice == JOptionPane.YES_OPTION);
             appController.reportWinnerKnowledge(finalKnew);

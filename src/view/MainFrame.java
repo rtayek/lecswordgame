@@ -96,13 +96,11 @@ class MainFrame extends JFrame implements Navigation {
 
     @Override
     public void showMultiplayerGame() {
-    	multiplayer.onShow();
         layout.show(cards, cardMulti);
     }
 
     @Override
     public void showSoloGame() {
-        solo.onShow();
         layout.show(cards, cardSolo);
     }
     

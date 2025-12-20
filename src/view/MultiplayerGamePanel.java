@@ -19,6 +19,8 @@ import model.enums.Difficulty;
 import java.awt.Color;
 import javax.swing.JOptionPane;
 import javax.swing.ImageIcon;
+import controller.NextAction;
+import controller.OutcomeViewModel;
 
 class MultiplayerGamePanel extends BaseGamePanel {
 
@@ -102,7 +104,7 @@ class MultiplayerGamePanel extends BaseGamePanel {
             return;
         }
 
-        if (vm.nextAction() == GameOutcomePresenter.NextAction.SHOW_LAST_CHANCE) {
+        if (vm.nextAction() == NextAction.SHOW_LAST_CHANCE) {
             JOptionPane.showMessageDialog(this, vm.message(), vm.title(), JOptionPane.INFORMATION_MESSAGE);
             submitButton.setEnabled(true);
             guessField.setEnabled(true);
@@ -113,7 +115,7 @@ class MultiplayerGamePanel extends BaseGamePanel {
 
         var toShow = vm;
         Boolean finalWinnerKnew = winnerKnewWord;
-        if (vm.nextAction() == GameOutcomePresenter.NextAction.ASK_WINNER_KNOWLEDGE) {
+        if (vm.nextAction() == NextAction.ASK_WINNER_KNOWLEDGE) {
             int choice = JOptionPane.showConfirmDialog(this, vm.message(), vm.title(), JOptionPane.YES_NO_OPTION);
             finalWinnerKnew = (choice == JOptionPane.YES_OPTION);
             appController.reportWinnerKnowledge(finalWinnerKnew);
