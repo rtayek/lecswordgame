@@ -15,7 +15,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-import model.enums.Difficulty;
 import java.awt.Color;
 import javax.swing.JOptionPane;
 import javax.swing.ImageIcon;
@@ -131,12 +130,9 @@ class MultiplayerGamePanel extends BaseGamePanel {
     }
 
     @Override
-    void addGuessRow(model.GamePlayer player, model.GuessResult result, Difficulty difficulty) {
-        boolean isPlayerOne = lastModel != null && lastModel.playerOne() != null
-                && player != null
-                && player.profile() != null
-                && lastModel.playerOne().equals(player.profile().username());
-        if (isPlayerOne) {
+    void addGuessRow(controller.events.GuessView guessView, controller.events.DifficultyView difficulty) {
+        var result = guessView.result();
+        if (guessView.isPlayerOne()) {
             leftGrid.addGuessRow(new GuessRowPanel(result, difficulty));
         } else {
             rightGrid.addGuessRow(new GuessRowPanel(result, difficulty));
@@ -153,7 +149,7 @@ class MultiplayerGamePanel extends BaseGamePanel {
             return;
         }
 
-        if ("finished".equalsIgnoreCase(lastModel.status())) {
+        if (lastModel.status() == controller.events.GameStatusView.finished) {
             var winnerName = lastModel.winner();
             if (winnerName == null) {
                 currentPlayerLabel.setText("Game finished: It's a Tie!");

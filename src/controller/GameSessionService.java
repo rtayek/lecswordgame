@@ -9,12 +9,13 @@ import model.GuessOutcome;
 import model.WordChoice;
 import model.enums.GameMode;
 import model.enums.GameStatus;
-import model.enums.WordLength;
 import controller.TurnTimer;
 import controller.events.GameEvent;
 import controller.events.GameEvent.GameEventKind;
 import controller.events.GameEventListener;
 import controller.events.GameUiModel;
+import controller.events.GameStatusView;
+import controller.events.DifficultyView;
 
 /**
  * Orchestrates the lifecycle of a single game session and fans out state/events.
@@ -62,7 +63,7 @@ public class GameSessionService implements TurnTimer.Listener {
         return currentGameState;
     }
 
-    public GuessOutcome submitGuess(String guess) {
+    public void submitGuess(String guess) {
         if (currentGameState == null) {
             throw new IllegalStateException("Start a new game first.");
         }
@@ -74,10 +75,10 @@ public class GameSessionService implements TurnTimer.Listener {
         GameStatus newStatus = outcome.status();
         GamePlayer nextTurn = outcome.nextTurn();
 
-        publish(GameEventKind.gameStateUpdated, outcome);
+        publish(GameEventKind.gameStateUpdated, null);
 
         if (newStatus == GameStatus.finished) {
-            publish(GameEventKind.gameFinished, outcome);
+            publish(GameEventKind.gameFinished, null);
             turnTimer.stop();
         } else if (newStatus == GameStatus.awaitingWinnerKnowledge) {
             // Pause timers while waiting for winner knowledge response.
@@ -85,7 +86,6 @@ public class GameSessionService implements TurnTimer.Listener {
         } else if (currentGameState.getConfig().timerDuration().isTimed() && nextTurn != null && nextTurn != player) {
             turnTimer.start(nextTurn);
         }
-        return outcome;
     }
 
     public void reset() {
@@ -171,8 +171,8 @@ public class GameSessionService implements TurnTimer.Listener {
         var keyboard = buildKeyboardView(state);
         return new GameUiModel(
                 state.getId(),
-                state.getStatus().name(),
-                state.getConfig().difficulty().name().toLowerCase(),
+                mapStatus(state.getStatus()),
+                mapDifficulty(state.getConfig().difficulty()),
                 name(state.getCurrentTurn()),
                 winnerName,
                 provisional,
@@ -261,5 +261,26 @@ public class GameSessionService implements TurnTimer.Listener {
                 result.correctLetterCount(),
                 result.exactMatch()
         );
+    }
+
+    private GameStatusView mapStatus(GameStatus status) {
+        if (status == null) return GameStatusView.setup;
+        return switch (status) {
+            case setup -> GameStatusView.setup;
+            case inProgress -> GameStatusView.inProgress;
+            case awaitingWinnerKnowledge -> GameStatusView.awaitingWinnerKnowledge;
+            case waitingForFinalGuess -> GameStatusView.waitingForFinalGuess;
+            case soloChase -> GameStatusView.soloChase;
+            case finished -> GameStatusView.finished;
+        };
+    }
+
+    private DifficultyView mapDifficulty(model.enums.Difficulty difficulty) {
+        if (difficulty == null) return DifficultyView.normal;
+        return switch (difficulty) {
+            case normal -> DifficultyView.normal;
+            case hard -> DifficultyView.hard;
+            case expert -> DifficultyView.expert;
+        };
     }
 }

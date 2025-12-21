@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 import javax.swing.JButton;
 import javax.swing.JPanel;
+import controller.events.KeyboardView;
+import controller.events.LetterFeedbackView;
 import model.GuessResult;
 import model.enums.Difficulty;
 import model.enums.LetterFeedback;
@@ -133,6 +135,29 @@ class KeyboardPanel extends JPanel {
         }
     }
 
+    void apply(KeyboardView keyboardView, controller.events.DifficultyView difficultyValue) {
+        // reset to unused
+        for (char c = 'A'; c <= 'Z'; c++) {
+            letterStates.put(c, LetterFeedback.unused);
+        }
+        if (keyboardView != null && keyboardView.keyStates() != null) {
+            for (Map.Entry<Character, String> e : keyboardView.keyStates().entrySet()) {
+                var fb = toFeedback(e.getValue());
+                letterStates.put(Character.toUpperCase(e.getKey()), fb);
+            }
+        }
+        applyStyles(mapDifficulty(difficultyValue));
+    }
+
+    private Difficulty mapDifficulty(controller.events.DifficultyView value) {
+        if (value == null) return Difficulty.normal;
+        return switch (value) {
+            case normal -> Difficulty.normal;
+            case hard -> Difficulty.hard;
+            case expert -> Difficulty.expert;
+        };
+    }
+
     // Define precedence for feedback types (higher means "better")
     private int getFeedbackPrecedence(LetterFeedback fb) {
         return switch (fb) {
@@ -144,4 +169,15 @@ class KeyboardPanel extends JPanel {
     }
 
     static final long serialVersionUID = 1L;
+
+    private LetterFeedback toFeedback(String value) {
+        if (value == null) return LetterFeedback.unused;
+        return switch (value.toLowerCase()) {
+            case "correct" -> LetterFeedback.correct;
+            case "present" -> LetterFeedback.present;
+            case "absent" -> LetterFeedback.notPresent;
+            case "used" -> LetterFeedback.notPresent; // used but unknown -> gray
+            default -> LetterFeedback.unused;
+        };
+    }
 }

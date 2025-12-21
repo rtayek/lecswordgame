@@ -1,8 +1,6 @@
 package controller;
 
-import model.GamePlayer;
-import model.enums.FinishState;
-import model.enums.GameStatus;
+import controller.events.GameStatusView;
 import util.SoundEffect;
 
 /**
@@ -13,8 +11,8 @@ public class GameOutcomePresenter {
     public OutcomeViewModel build(controller.events.GameUiModel state, Boolean winnerKnewWord) {
         if (state == null) return null;
 
-        return switch (state.status().toLowerCase()) {
-            case "waitingforfinalguess" -> {
+        return switch (state.status()) {
+            case waitingForFinalGuess -> {
                 String lastGuesser = state.provisionalWinner() != null ? state.provisionalWinner() : state.currentPlayer();
                 String opponent = state.currentPlayer();
                 String message = String.format(
@@ -25,12 +23,12 @@ public class GameOutcomePresenter {
                 );
                 yield new OutcomeViewModel("Last Chance!", message, null, null, NextAction.SHOW_LAST_CHANCE);
             }
-            case "awaitingwinnerknowledge" -> {
+            case awaitingWinnerKnowledge -> {
                 String winner = state.provisionalWinner() != null ? state.provisionalWinner() : state.currentPlayer();
                 String ask = String.format("%s, you guessed the word! Did you know this word?", safeName(winner));
                 yield new OutcomeViewModel("Win Condition", ask, null, null, NextAction.ASK_WINNER_KNOWLEDGE);
             }
-            case "finished" -> {
+            case finished -> {
                 String winner = state.winner();
                 if (winner == null) {
                     yield new OutcomeViewModel("Game Result", "It's a Tie! Both players guessed the word.", "tie.png", SoundEffect.tie, NextAction.NONE);

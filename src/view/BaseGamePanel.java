@@ -13,7 +13,6 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
-import model.enums.Difficulty;
 
 abstract class BaseGamePanel extends JPanel implements TurnTimer.Listener, GameEventListener {
 
@@ -56,20 +55,7 @@ abstract class BaseGamePanel extends JPanel implements TurnTimer.Listener, GameE
 
     protected void handleGuess() {
         try {
-            var outcome = appController.submitGuess(guessField.getText());
-            var result = outcome.entry().result();
-            var difficulty = lastModel != null ? lastModel.difficulty() : "normal";
-
-            addGuessRow(outcome.entry().player(), result, mapDifficulty(difficulty));
-
-            var statusName = outcome.status().name();
-            if ("waitingForFinalGuess".equalsIgnoreCase(statusName)
-                    || "finished".equalsIgnoreCase(statusName)
-                    || "awaitingWinnerKnowledge".equalsIgnoreCase(statusName)) {
-                onGameFinished(lastModel, null);
-            } else {
-                updateCurrentPlayerLabelFromModel();
-            }
+            appController.submitGuess(guessField.getText());
             guessField.setText("");
         } catch (Exception e) {
             setStatus(e.getMessage());
@@ -104,12 +90,8 @@ abstract class BaseGamePanel extends JPanel implements TurnTimer.Listener, GameE
         label.setForeground(isTimerRed ? Color.RED : Color.BLACK);
     }
     
-    protected Difficulty mapDifficulty(String value) {
-        try {
-            return Difficulty.valueOf(value);
-        } catch (Exception e) {
-            return Difficulty.normal;
-        }
+    protected controller.events.DifficultyView mapDifficulty(controller.events.DifficultyView value) {
+        return value == null ? controller.events.DifficultyView.normal : value;
     }
     
     @Override
@@ -130,22 +112,37 @@ abstract class BaseGamePanel extends JPanel implements TurnTimer.Listener, GameE
         guessField.setEnabled(true);
         keyboardPanel.setEnabled(true);
         submitButton.setEnabled(true);
+        renderGuesses(model, 0);
         updateCurrentPlayerLabelFromModel();
+        keyboardPanel.apply(model.keyboard(), mapDifficulty(model.difficulty()));
     }
 
     protected void onGameStateUpdated(GameUiModel model) {
+        int previousGuessCount = lastModel != null && lastModel.guesses() != null ? lastModel.guesses().size() : 0;
         lastModel = model;
-        if (lastModel != null && ("waitingForFinalGuess".equalsIgnoreCase(lastModel.status())
-                || "awaitingWinnerKnowledge".equalsIgnoreCase(lastModel.status()))) {
+        renderGuesses(model, previousGuessCount);
+
+        if (lastModel != null && (lastModel.status() == controller.events.GameStatusView.waitingForFinalGuess
+                || lastModel.status() == controller.events.GameStatusView.awaitingWinnerKnowledge)) {
             onGameFinished(lastModel, null);
         } else {
             updateCurrentPlayerLabelFromModel();
+        }
+        keyboardPanel.apply(model.keyboard(), mapDifficulty(model.difficulty()));
+    }
+
+    private void renderGuesses(GameUiModel model, int alreadyRendered) {
+        var guesses = model.guesses();
+        if (guesses == null) return;
+        var diff = mapDifficulty(model.difficulty());
+        for (int i = alreadyRendered; i < guesses.size(); i++) {
+            addGuessRow(guesses.get(i), diff);
         }
     }
 
     abstract void onGameFinished(GameUiModel uiModel, Boolean winnerKnewWord);
     
-    abstract void addGuessRow(model.GamePlayer player, model.GuessResult result, Difficulty difficulty);
+    abstract void addGuessRow(controller.events.GuessView guessView, controller.events.DifficultyView difficulty);
 
     abstract void updateCurrentPlayerLabelFromModel();
 }

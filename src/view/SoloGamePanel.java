@@ -15,7 +15,6 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-import model.enums.Difficulty;
 
 import java.awt.Color;
 import javax.swing.JOptionPane;
@@ -95,8 +94,8 @@ class SoloGamePanel extends BaseGamePanel {
     }
 
     @Override
-    void addGuessRow(model.GamePlayer player, model.GuessResult result, Difficulty difficulty) {
-        grid.addGuessRow(new GuessRowPanel(result, difficulty));
+    void addGuessRow(controller.events.GuessView guessView, controller.events.DifficultyView difficulty) {
+        grid.addGuessRow(new GuessRowPanel(guessView.result(), difficulty));
     }
 
     @Override
@@ -117,8 +116,4 @@ class SoloGamePanel extends BaseGamePanel {
         if (!player.profile().username().equals(lastModel.playerOne())) return;
         setStatus(player.profile().username() + " ran out of time!");
     }
-}
-
-enum DifficultyView {
-    normal, hard, expert
 }

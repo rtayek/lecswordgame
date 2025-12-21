@@ -1,15 +1,16 @@
 package controller.events;
 
 import java.util.List;
-import model.enums.GameStatus;
+import controller.events.GameStatusView;
+import controller.events.DifficultyView;
 
 /**
  * Lightweight UI snapshot with only primitives/strings.
  */
 public record GameUiModel(
         String gameId,
-        String status,
-        String difficulty,
+        GameStatusView status,
+        DifficultyView difficulty,
         String currentPlayer,
         String winner,
         String provisionalWinner,

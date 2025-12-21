@@ -70,11 +70,11 @@ public class AppController {
         wordSelectionFlow.clear();
     }
     
-    public GuessOutcome submitGuess(String guess) {
+    public void submitGuess(String guess) {
         if (gameSessionService.getCurrentGameState() == null) {
             throw new IllegalStateException("Start a new game first.");
         }
-        return gameSessionService.submitGuess(guess);
+        gameSessionService.submitGuess(guess);
     }
 
     public PlayerProfile getCurrentProfile() {
