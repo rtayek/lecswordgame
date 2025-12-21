@@ -99,7 +99,7 @@ abstract class BaseGamePanel extends JPanel implements TurnTimer.Listener, GameE
         switch (event.kind()) {
             case gameStarted -> onGameStarted(event.view());
             case gameStateUpdated -> onGameStateUpdated(event.view());
-            case gameFinished -> onGameFinished(event.view(), null);
+            case gameFinished -> onGameFinished(event.view());
             default -> {
             }
         }
@@ -121,13 +121,7 @@ abstract class BaseGamePanel extends JPanel implements TurnTimer.Listener, GameE
         int previousGuessCount = lastModel != null && lastModel.guesses() != null ? lastModel.guesses().size() : 0;
         lastModel = model;
         renderGuesses(model, previousGuessCount);
-
-        if (lastModel != null && (lastModel.status() == controller.events.GameStatusView.waitingForFinalGuess
-                || lastModel.status() == controller.events.GameStatusView.awaitingWinnerKnowledge)) {
-            onGameFinished(lastModel, null);
-        } else {
-            updateCurrentPlayerLabelFromModel();
-        }
+        updateCurrentPlayerLabelFromModel();
         keyboardPanel.apply(model.keyboard(), mapDifficulty(model.difficulty()));
     }
 
@@ -140,7 +134,7 @@ abstract class BaseGamePanel extends JPanel implements TurnTimer.Listener, GameE
         }
     }
 
-    abstract void onGameFinished(GameUiModel uiModel, Boolean winnerKnewWord);
+    abstract void onGameFinished(GameUiModel uiModel);
     
     abstract void addGuessRow(controller.events.GuessView guessView, controller.events.DifficultyView difficulty);
 

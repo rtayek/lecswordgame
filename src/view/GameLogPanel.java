@@ -10,7 +10,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
-import model.GameLogEntry;
+import controller.events.GameLogEntryView;
 
 class GameLogPanel extends JPanel {
 
@@ -47,10 +47,10 @@ class GameLogPanel extends JPanel {
 
     public void onShow() {
         tableModel.setRowCount(0); // Clear existing data
-        List<GameLogEntry> logs = appController.getGameLog();
+        List<GameLogEntryView> logs = appController.getGameLog();
 
         int gameNum = 1;
-        for (GameLogEntry entry : logs) {
+        for (GameLogEntryView entry : logs) {
             tableModel.addRow(new Object[]{
                 gameNum++,
                 entry.playerOneName(),

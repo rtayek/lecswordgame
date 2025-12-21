@@ -15,8 +15,8 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import model.PlayerProfile;
 import util.ResourceLoader; // Import ResourceLoader
+import controller.events.PlayerProfileView;
 
 class ProfileSetupPanel extends JPanel {
 
@@ -83,7 +83,7 @@ class ProfileSetupPanel extends JPanel {
     }
 
     private void loadProfileData() {
-        PlayerProfile profile = appController.getCurrentProfile();
+        PlayerProfileView profile = appController.getCurrentProfile();
         usernameField.setText(profile.username());
         currentAvatarPath = profile.avatarPath();
         if (currentAvatarPath != null && !currentAvatarPath.isEmpty()) {
@@ -100,7 +100,7 @@ class ProfileSetupPanel extends JPanel {
             JOptionPane.showMessageDialog(this, "Username cannot be empty!", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
-        PlayerProfile newProfile = new PlayerProfile(username, currentAvatarPath);
+        PlayerProfileView newProfile = new PlayerProfileView(username, currentAvatarPath);
         appController.setCurrentProfile(newProfile);
         JOptionPane.showMessageDialog(this, "Profile saved successfully!");
     }

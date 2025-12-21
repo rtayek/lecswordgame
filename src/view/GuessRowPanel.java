@@ -16,7 +16,7 @@ class GuessRowPanel extends JPanel {
 
     GuessRowPanel(GuessResultView result, DifficultyView difficulty) {
         this.difficulty = difficulty; // Initialize
-        if (difficulty == Difficulty.expert) {
+        if (difficulty == DifficultyView.expert) {
             setupExpert(result);
         } else {
             setupNormal(result);
@@ -51,7 +51,7 @@ class GuessRowPanel extends JPanel {
         label.setForeground(Color.WHITE);
 
         Color bg;
-        if (difficulty == Difficulty.hard) {
+        if (difficulty == DifficultyView.hard) {
             bg = switch (fb) {
                 case correct, present -> new Color(0x2E7D32); // green for present in word
                 case absent           -> new Color(0xB71C1C); // red

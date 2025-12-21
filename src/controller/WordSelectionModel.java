@@ -1,7 +1,7 @@
 package controller;
 
-import model.WordChoice;
-import model.enums.WordSource;
+import controller.events.WordChoiceView;
+import controller.events.WordSourceView;
 
 /**
  * Tracks word selection state (rolled vs manual) and builds WordChoice.
@@ -22,10 +22,10 @@ public class WordSelectionModel {
         }
     }
 
-    public WordChoice buildChoice(String word) {
+    public WordChoiceView buildChoice(String word) {
         String normalized = word == null ? "" : word.toUpperCase();
         boolean useDice = rolledByDice && normalized.equals(lastRolledWord);
-        return new WordChoice(normalized, useDice ? WordSource.rollTheDice : WordSource.manual);
+        return new WordChoiceView(normalized, useDice ? WordSourceView.rollTheDice : WordSourceView.manual);
     }
 
     public void clear() {

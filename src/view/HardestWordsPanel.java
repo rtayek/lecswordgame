@@ -10,7 +10,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableModel;
-import model.HardWordEntry;
+import controller.events.HardWordEntryView;
 
 class HardestWordsPanel extends JPanel {
 
@@ -47,9 +47,9 @@ class HardestWordsPanel extends JPanel {
 
     public void onShow() {
         tableModel.setRowCount(0); // Clear existing data
-        List<HardWordEntry> hardWords = appController.getHardestWords();
+        List<HardWordEntryView> hardWords = appController.getHardestWords();
 
-        for (HardWordEntry entry : hardWords) {
+        for (HardWordEntryView entry : hardWords) {
             tableModel.addRow(new Object[]{
                 entry.rank(),
                 entry.word(),

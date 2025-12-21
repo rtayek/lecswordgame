@@ -17,9 +17,9 @@ import javax.swing.JTextField;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.border.EmptyBorder;
-import model.WordChoice;
-import model.enums.WordSource;
 import util.ResourceLoader; // Added: Import ResourceLoader
+import controller.events.WordChoiceView;
+import controller.events.WordLengthView;
 
 class WordSelectionPanel extends JPanel {
 
@@ -106,7 +106,7 @@ class WordSelectionPanel extends JPanel {
     }
 
     private void rollTheDice() {
-        model.enums.WordLength lengthEnum = model.enums.WordLength.values()[viewData.wordLength() - 3];
+        WordLengthView lengthEnum = WordLengthView.fromLength(viewData.wordLength());
         String chosenWord = appController.pickWord(lengthEnum).toUpperCase();
         selectionModel.recordRoll(chosenWord);
         wordInput.setText(chosenWord);
@@ -126,13 +126,13 @@ class WordSelectionPanel extends JPanel {
             wordLengthHint.setText("Word must be %d letters long.".formatted(viewData.wordLength()));
             return;
         }
-        model.enums.WordLength lengthEnum = model.enums.WordLength.values()[viewData.wordLength() - 3];
+        WordLengthView lengthEnum = WordLengthView.fromLength(viewData.wordLength());
         if (!appController.isValidWord(chosenWord, lengthEnum)) {
              wordLengthHint.setText("'%s' is not a valid word.".formatted(chosenWord));
              return;
         }
 
-        WordChoice wordChoice = selectionModel.buildChoice(chosenWord);
+        WordChoiceView wordChoice = selectionModel.buildChoice(chosenWord);
         selectionModel.clear();
         
         if (viewData.isPlayerOneTurn()) {

@@ -82,6 +82,7 @@ public class GameState {
         setStatus(GameStatus.inProgress);
         this.winner = null;
         this.provisionalWinner = null;
+        this.winnerKnewWord = null;
         this.playerOneFinishState = FinishState.notFinished;
         this.playerTwoFinishState = FinishState.notFinished;
         setPlayerOneWord(playerOneWord);
@@ -96,6 +97,7 @@ public class GameState {
             if (provisionalWinner == null) {
                 return;
             }
+            this.winnerKnewWord = winnerKnewWord;
             if (!winnerKnewWord) {
                 finishWithWinner(provisionalWinner);
                 return;
@@ -112,6 +114,7 @@ public class GameState {
         if (winner == null) {
             return;
         }
+        this.winnerKnewWord = winnerKnewWord;
         if (config.mode() == GameMode.multiplayer && winnerKnewWord) {
             GamePlayer opponent = getOpponent(winner);
             if (getPlayerFinishState(opponent) == FinishState.finishedSuccess) {
@@ -165,6 +168,10 @@ public class GameState {
 
     public GamePlayer getProvisionalWinner() {
         return provisionalWinner;
+    }
+
+    public Boolean getWinnerKnewWord() {
+        return winnerKnewWord;
     }
 
     void setWinner(GamePlayer winner) {
@@ -273,6 +280,7 @@ public class GameState {
     final List<GuessEntry> guesses;
     GamePlayer winner;
     GamePlayer provisionalWinner;
+    Boolean winnerKnewWord;
     private FinishState playerOneFinishState = FinishState.notFinished;
     private FinishState playerTwoFinishState = FinishState.notFinished;
 }

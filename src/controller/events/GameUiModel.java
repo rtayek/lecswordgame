@@ -14,6 +14,7 @@ public record GameUiModel(
         String currentPlayer,
         String winner,
         String provisionalWinner,
+        Boolean winnerKnewWord,
         String playerOne,
         String playerTwo,
         int timerDurationSeconds,

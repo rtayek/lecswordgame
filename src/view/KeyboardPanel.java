@@ -8,16 +8,14 @@ import java.util.Map;
 import java.util.function.Consumer;
 import javax.swing.JButton;
 import javax.swing.JPanel;
+import controller.events.DifficultyView;
 import controller.events.KeyboardView;
 import controller.events.LetterFeedbackView;
-import model.GuessResult;
-import model.enums.Difficulty;
-import model.enums.LetterFeedback;
 
 class KeyboardPanel extends JPanel {
 
     private final Map<Character, JButton> buttons = new HashMap<>();
-    private final Map<Character, LetterFeedback> letterStates = new HashMap<>();
+    private final Map<Character, LetterFeedbackView> letterStates = new HashMap<>();
     private final Consumer<Character> onKey;
 
     KeyboardPanel(Consumer<Character> onKey) {
@@ -34,7 +32,7 @@ class KeyboardPanel extends JPanel {
         
         // Initialize all letters as unused
         for (char c = 'A'; c <= 'Z'; c++) {
-            letterStates.put(c, LetterFeedback.unused);
+            letterStates.put(c, LetterFeedbackView.unused);
         }
     }
     
@@ -50,37 +48,9 @@ class KeyboardPanel extends JPanel {
         return rowPanel;
     }
 
-    void updateKeyboard(GuessResult result, Difficulty difficulty) {
-        String guess = result.guess().toUpperCase();
-        // Expert mode carries no per-letter feedback; just gray out used letters.
-        if (difficulty == Difficulty.expert) {
-            for (int i = 0; i < guess.length(); i++) {
-                char c = guess.charAt(i);
-                letterStates.put(c, LetterFeedback.notPresent); // mark as used/gray
-            }
-            applyStyles(difficulty);
-            return;
-        }
-
-        for (int i = 0; i < guess.length(); i++) {
-            char c = guess.charAt(i);
-            if (i >= result.feedback().size()) {
-                continue;
-            }
-            LetterFeedback newFeedback = result.feedback().get(i);
-            
-            // Update letter state if new feedback is "better"
-            LetterFeedback currentFeedback = letterStates.getOrDefault(c, LetterFeedback.unused);
-            if (getFeedbackPrecedence(newFeedback) > getFeedbackPrecedence(currentFeedback)) {
-                letterStates.put(c, newFeedback);
-            }
-        }
-        applyStyles(difficulty);
-    }
-
     void resetKeyboard() {
         for (char c = 'A'; c <= 'Z'; c++) {
-            letterStates.put(c, LetterFeedback.unused);
+            letterStates.put(c, LetterFeedbackView.unused);
             JButton button = buttons.get(c);
             if (button != null) {
                 button.setBackground(null); // Reset to default background
@@ -91,10 +61,10 @@ class KeyboardPanel extends JPanel {
         repaint();
     }
 
-    private void applyStyles(Difficulty difficulty) {
-        for (Map.Entry<Character, LetterFeedback> entry : letterStates.entrySet()) {
+    private void applyStyles(DifficultyView difficulty) {
+        for (Map.Entry<Character, LetterFeedbackView> entry : letterStates.entrySet()) {
             char c = entry.getKey();
-            LetterFeedback feedback = entry.getValue();
+            LetterFeedbackView feedback = entry.getValue();
             JButton button = buttons.get(c);
 
             if (button != null) {
@@ -112,9 +82,9 @@ class KeyboardPanel extends JPanel {
         repaint();
     }
 
-    private Color getButtonColor(LetterFeedback feedback, Difficulty difficulty) {
-        if (difficulty == Difficulty.expert) {
-            return (feedback != LetterFeedback.unused) ? Color.GRAY : null; // Just gray out if used in Expert mode
+    private Color getButtonColor(LetterFeedbackView feedback, DifficultyView difficulty) {
+        if (difficulty == DifficultyView.expert) {
+            return (feedback != LetterFeedbackView.unused) ? Color.GRAY : null; // Just gray out if used in Expert mode
         }
 
         // Normal and Hard modes
@@ -122,12 +92,12 @@ class KeyboardPanel extends JPanel {
             case correct:
                 return new Color(0x2E7D32); // Green
             case present:
-                if (difficulty == Difficulty.hard) {
+                if (difficulty == DifficultyView.hard) {
                     return new Color(0x2E7D32); // Green for "present in word" in Hard mode
                 } else {
                     return new Color(0xF9A825); // Orange for "wrong position" in Normal mode
                 }
-            case notPresent:
+            case absent:
                 return new Color(0xB71C1C); // Red
             case unused:
             default:
@@ -138,7 +108,7 @@ class KeyboardPanel extends JPanel {
     void apply(KeyboardView keyboardView, controller.events.DifficultyView difficultyValue) {
         // reset to unused
         for (char c = 'A'; c <= 'Z'; c++) {
-            letterStates.put(c, LetterFeedback.unused);
+            letterStates.put(c, LetterFeedbackView.unused);
         }
         if (keyboardView != null && keyboardView.keyStates() != null) {
             for (Map.Entry<Character, String> e : keyboardView.keyStates().entrySet()) {
@@ -146,38 +116,19 @@ class KeyboardPanel extends JPanel {
                 letterStates.put(Character.toUpperCase(e.getKey()), fb);
             }
         }
-        applyStyles(mapDifficulty(difficultyValue));
-    }
-
-    private Difficulty mapDifficulty(controller.events.DifficultyView value) {
-        if (value == null) return Difficulty.normal;
-        return switch (value) {
-            case normal -> Difficulty.normal;
-            case hard -> Difficulty.hard;
-            case expert -> Difficulty.expert;
-        };
-    }
-
-    // Define precedence for feedback types (higher means "better")
-    private int getFeedbackPrecedence(LetterFeedback fb) {
-        return switch (fb) {
-            case correct -> 3;
-            case present -> 2;
-            case notPresent -> 1;
-            case unused -> 0; // initial state
-        };
+        applyStyles(difficultyValue == null ? DifficultyView.normal : difficultyValue);
     }
 
     static final long serialVersionUID = 1L;
 
-    private LetterFeedback toFeedback(String value) {
-        if (value == null) return LetterFeedback.unused;
+    private LetterFeedbackView toFeedback(String value) {
+        if (value == null) return LetterFeedbackView.unused;
         return switch (value.toLowerCase()) {
-            case "correct" -> LetterFeedback.correct;
-            case "present" -> LetterFeedback.present;
-            case "absent" -> LetterFeedback.notPresent;
-            case "used" -> LetterFeedback.notPresent; // used but unknown -> gray
-            default -> LetterFeedback.unused;
+            case "correct" -> LetterFeedbackView.correct;
+            case "present" -> LetterFeedbackView.present;
+            case "absent" -> LetterFeedbackView.absent;
+            case "used" -> LetterFeedbackView.absent; // used but unknown -> gray
+            default -> LetterFeedbackView.unused;
         };
     }
 }

@@ -1,6 +1,5 @@
 package controller;
 
-import controller.events.GameStatusView;
 import util.SoundEffect;
 
 /**
@@ -8,8 +7,9 @@ import util.SoundEffect;
  */
 public class GameOutcomePresenter {
 
-    public OutcomeViewModel build(controller.events.GameUiModel state, Boolean winnerKnewWord) {
+    public OutcomeViewModel build(controller.events.GameUiModel state) {
         if (state == null) return null;
+        Boolean winnerKnewWord = state.winnerKnewWord();
 
         return switch (state.status()) {
             case waitingForFinalGuess -> {

@@ -97,8 +97,8 @@ class MultiplayerGamePanel extends BaseGamePanel {
     }
 
     @Override
-    void onGameFinished(GameUiModel uiModel, Boolean winnerKnewWord) {
-        var vm = outcomePresenter.build(uiModel, winnerKnewWord);
+    void onGameFinished(GameUiModel uiModel) {
+        var vm = outcomePresenter.build(uiModel);
         if (vm == null) {
             return;
         }
@@ -113,12 +113,11 @@ class MultiplayerGamePanel extends BaseGamePanel {
         }
 
         var toShow = vm;
-        Boolean finalWinnerKnew = winnerKnewWord;
         if (vm.nextAction() == NextAction.ASK_WINNER_KNOWLEDGE) {
             int choice = JOptionPane.showConfirmDialog(this, vm.message(), vm.title(), JOptionPane.YES_NO_OPTION);
-            finalWinnerKnew = (choice == JOptionPane.YES_OPTION);
+            boolean finalWinnerKnew = (choice == JOptionPane.YES_OPTION);
             appController.reportWinnerKnowledge(finalWinnerKnew);
-            toShow = outcomePresenter.build(uiModel, finalWinnerKnew);
+            toShow = outcomePresenter.build(uiModel);
         }
 
         if (toShow == null) {

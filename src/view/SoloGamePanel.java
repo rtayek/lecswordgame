@@ -65,21 +65,20 @@ class SoloGamePanel extends BaseGamePanel {
     }
 
     @Override
-    void onGameFinished(GameUiModel uiModel, Boolean playerKnewWord) {
+    void onGameFinished(GameUiModel uiModel) {
         // Disable input elements when the game is finished
         guessField.setEnabled(false);
         keyboardPanel.setEnabled(false);
 
-        var vm = outcomePresenter.build(uiModel, playerKnewWord);
+        var vm = outcomePresenter.build(uiModel);
         if (vm == null) {
             return;
         }
 
         var toShow = vm;
-        Boolean finalKnew = playerKnewWord;
         if (vm.nextAction() == NextAction.ASK_WINNER_KNOWLEDGE) {
             int choice = JOptionPane.showConfirmDialog(this, vm.message(), vm.title(), JOptionPane.YES_NO_OPTION);
-            finalKnew = (choice == JOptionPane.YES_OPTION);
+            boolean finalKnew = (choice == JOptionPane.YES_OPTION);
             appController.reportWinnerKnowledge(finalKnew);
             return; // new event will render final outcome
         }
