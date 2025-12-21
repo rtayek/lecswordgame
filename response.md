@@ -1,100 +1,95 @@
-Yep — I opened the **latest tar** and here’s **exactly where you are** (no guessing).
+Yeah — we **are** stuck in a loop, and it’s not because the code is hopeless. It’s because the *process* is:
 
-## Where you are now
+1. upload tar
+2. I tell you “here’s where you are”
+3. Gemini changes something big
+4. new tar
+5. repeat until heat death of the universe
 
-### ✅ The “big three” architectural goals are DONE
+We fix that by **freezing a baseline** and only allowing **bounded, test-backed changes**.
 
-1. **Intent-only input**
+## The good news: your current tar is already “architecturally okay”
 
-* `BaseGamePanel.handleGuess()` is now clean:
+I looked at `src/view/BaseGamePanel.java` in this tar. It’s *exactly* the shape we wanted:
 
-  * calls `appController.submitGuess(...)`
-  * clears the field
-  * no outcome-based UI decisions
+* `handleGuess()` is intent-only (`submitGuess` + clear field)
+* UI renders guesses from `GameUiModel.guesses()` (snapshot)
+* keyboard renders from `KeyboardView` + `DifficultyView` (snapshot)
+* `GameEvent` carries only `{ kind, view }` (no metadata backdoor)
+* `GameUiModel` uses `GameStatusView` / `DifficultyView` (typed, not strings)
 
-2. **Events + snapshots drive rendering**
+So you’re not lost. You’re just repeatedly re-validating the same thing.
 
-* `GameEvent` is now just:
+## How we stop the loop
 
-  ```java
-  public record GameEvent(GameEventKind kind, GameUiModel view) { ... }
-  ```
+### Rule 1: Baseline commit stays sacred
 
-  ✅ No `metadata Object` backdoor anymore.
+Pick one commit (you already did this once with `6966b45`) and tag it:
 
-3. **Typed UI model (no stringly status/difficulty)**
+```bash
+git tag -a baseline -m "known good baseline"
+git push origin baseline
+```
 
-* `GameUiModel` uses:
+From now on, every “Gemini/Codex round” happens on a branch:
 
-  * `GameStatusView`
-  * `DifficultyView`
-* `BaseGamePanel` renders from:
+```bash
+git switch -c gemini-try-1
+```
 
-  * `model.guesses()` as `List<GuessView>`
-  * `model.keyboard()` as `KeyboardView`
+If it goes feral: delete the branch. No drama.
 
-This is the “boring and correct” endpoint we were aiming for.
+### Rule 2: One refactor goal per round
 
----
+Not “architecture improvements”. One goal, measurable, with tests.
 
-## What’s still messy / incomplete
+Examples of acceptable goals:
 
-### 1) The view layer still imports domain types in a few panels
+* “Remove remaining `model.*` imports from `src/view`”
+* “Make gameFinished purely event-driven”
+* “Fix keyboard coloring in expert mode”
+* “Make timer switch/pause deterministic”
 
-I grepped `src/view` for `import model.` and found these still leaking domain types:
+### Rule 3: Each round ends with a diff + tests
 
-* `GameLogPanel.java`
-* `GameSetupPanel.java`
-* `HardestWordsPanel.java`
-* `KeyboardPanel.java`
-* `ProfileSetupPanel.java`
-* `WordSelectionPanel.java`
+No new tar until you can answer:
 
-Some of these are “UI configuration/data entry” screens, so it’s not catastrophic, but it means you’re not *fully* DTO-only in the UI.
+```bash
+git diff --stat baseline..HEAD
+```
 
-### 2) `KeyboardPanel` still has leftover domain-era code
+and
 
-`KeyboardPanel.java` imports `model.GuessResult` and domain enums, even though the “right” path now is:
+* tests pass (JUnit), and/or
+* you ran one manual smoke test
 
-* `apply(KeyboardView, DifficultyView)` using `LetterFeedbackView`
+Then we review the diff. If it’s too big, we revert/cherry-pick.
 
-So there’s almost certainly an old overload or old mapping logic hanging around. (Not fatal, but it’s exactly the kind of thing that reintroduces coupling later.)
+## A concrete next step (so we actually move forward)
 
----
+Since you said JavaFX/CLI is low priority, the highest-value *architectural* cleanup left is:
 
-## What I recommend next (tight scope, low drama)
+### Finish DTO-only view layer
 
-### A) Finish DTO-only in Swing (mechanical sweep)
+In this tar, the core game panels look good. The loop usually comes from “other panels” still importing `model.*` (setup/log/profile/hard-words).
 
-Goal: **no `import model.*` anywhere under `src/view`**.
+So pick this as the next bounded goal:
 
-How:
+> **Goal:** No `import model.*` anywhere under `src/view`.
 
-* For setup/profile/log/hard-words screens, either:
+And enforce it with a simple grep check:
 
-  * introduce small view DTOs in `controller.events` (or `controller.api`), **or**
-  * have `AppController` return “view-friendly” records for those screens
+```bash
+grep -R "import model\." -n src/view && echo "FAIL"
+```
 
-You don’t need a huge mapping layer—just stop passing domain objects into view constructors.
+If it prints nothing: you win. Commit it. Done.
 
-### B) Clean `KeyboardPanel`
+## Tell me one thing
 
-* Remove the old `updateKeyboard(GuessResult, Difficulty)` path (if it still exists)
-* Keep only:
+Do you want the next round to be:
 
-  * `KeyboardPanel.apply(KeyboardView, DifficultyView)`
+* **cleanup** (DTO-only in views), or
+* **behavior** (timers / win/lose prompts / hardest-words logic)?
 
-This will also let you drop `model.*` imports from that file immediately.
-
-### C) Optional: shrink `AppController` imports
-
-`AppController` still imports a bunch of domain types (fine), but now that events are clean, you can gradually tighten its public surface to return DTOs for non-game screens.
-
----
-
-## TL;DR “you are here”
-
-You’re at: **event-driven Swing UI, intent-only input, typed UI snapshots, no metadata backdoors.**
-What’s left is cleanup: **remove the remaining `model.*` imports from view panels (especially `KeyboardPanel`).**
-
-If you want, I can give you a concrete, file-by-file “replace these types with these DTOs” checklist to eliminate those 6 remaining `model.*` imports without a refactor spiral.
+Pick one and we’ll stop spinning.

@@ -1,4 +1,4 @@
-send tar.
-get response and put into response.txt
-check in and commit.
-give prompt to evil twin.
+give tar to chat
+get response from chat and put into response.txt
+git add and and commit.
+give prompt to codex.
