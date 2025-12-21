@@ -1,4 +1,4 @@
-send tar
-get response
-check in and use response as commit message?
-give to evil twin.
+send tar.
+get response and put into response.txt
+check in and commit.
+give prompt to evil twin.
