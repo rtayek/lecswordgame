@@ -1,9 +1,9 @@
 make tar and give tar to chat and ask it to analyze and recommend.
 wait
 get response from chat .
-clear chat.md and addresponse or append to chatmd. (remember main status and recommendations).
-git add,commit (save the all the .mds).
-
+add response or append to chatmd. (remember status and recommendations).
+git add,commit (save the all the .mds). (what we did and what we are going to do).
+clear content of chat.md (don't let it repeat).
 delete contents of codex.md  (remove what happend lat time. sigal nothing hapened yet).
 git add, commit, and push.
 

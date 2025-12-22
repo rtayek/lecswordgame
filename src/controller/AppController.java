@@ -50,7 +50,7 @@ public class AppController {
     public void playerOneWordSelected(WordChoiceView wordChoice) {
         var startRequest = wordSelectionFlow.playerOneSelected(toModel(wordChoice));
         if (startRequest != null) {
-            startGame(startRequest.config(), startRequest.playerOne(), startRequest.playerTwo(), startRequest.playerOneWord(), startRequest.playerTwoWord());
+            startGame(startRequest.config(), startRequest.playerOneWord(), startRequest.playerTwoWord());
         } else {
             var cfg = wordSelectionFlow.getPendingConfig();
             navigationCoordinator.showWordSelection(buildWordSelectionData(cfg, false));
@@ -59,10 +59,10 @@ public class AppController {
 
     public void playerTwoWordSelected(WordChoiceView wordChoice) {
         var startRequest = wordSelectionFlow.playerTwoSelected(toModel(wordChoice));
-        startGame(startRequest.config(), startRequest.playerOne(), startRequest.playerTwo(), startRequest.playerOneWord(), startRequest.playerTwoWord());
+        startGame(startRequest.config(), startRequest.playerOneWord(), startRequest.playerTwoWord());
     }
 
-    private void startGame(GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, WordChoice p1Word, WordChoice p2Word) {
+    private void startGame(GameConfig config, WordChoice p1Word, WordChoice p2Word) {
         var state = gameSessionService.startNewGame(config, p1Word, p2Word);
 
         if (config.mode() == GameMode.multiplayer) {

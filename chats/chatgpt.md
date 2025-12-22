@@ -1,112 +1,107 @@
-I unpacked the **current tar** and did a focused architecture pass (controller/event boundaries, view imports, timer wiring, outcome flow, and the “DTO-only” claim).
+I unpacked the **current tar** and did a targeted architecture + correctness review (controller/event boundaries, UI snapshot integrity, timer plumbing, and outcome flow). You are **not** in an architecture crisis; you have a handful of **real, actionable fixes**.
 
-## What’s already in a good place (do not churn)
+## The 3 most important issues
 
-* **View layer is clean of domain types**: `src/view` has **no `import model.*`**. Your gameplay UI really is DTO/snapshot-driven now.
-* **Event boundary is sane**: `GameEventListener` receives `GameUiModel` and `TimerView`. No “metadata backdoor”.
-* **Timer leak is fixed**: `TurnTimer` is now keyed by `PlayerSlot`, not `model.GamePlayer`.
+### 1) Bug: Untimed games can look like “00:00” and trigger “ran out of time”
 
-This is the “boring, deterministic” core you were aiming for. Treat it as frozen.
+`GameUiModelMapper` currently sets `playerOneRemaining/playerTwoRemaining` whenever the player exists, regardless of whether the game is timed:
 
----
+```java
+Integer p1Remaining = turnTimer != null && config.playerOne() != null
+    ? turnTimer.getRemainingFor(PlayerSlot.playerOne)
+    : null;
+```
 
-## High-value recommendations (small, correctness-oriented)
-
-### 1) Fix the winner-knowledge prompt flow (currently brittle)
-
-In `MultiplayerGamePanel.onGameFinished(...)`, when `NextAction.ASK_WINNER_KNOWLEDGE`:
-
-* You prompt
-* Call `appController.reportWinnerKnowledge(...)`
-* Then immediately do `outcomePresenter.build(uiModel)` again using the *old* snapshot
-
-That’s logically wrong: after reporting knowledge, the authoritative state is the **new snapshot** produced by the controller events, not the one you already have.
+For **untimed** games you call `turnTimer.reset()`, and `getRemainingFor()` returns `0`, so your UI can display **00:00** and even show “ran out of time!” (depending on panel logic).
 
 **Recommendation**
-Make `onGameFinished` strictly event-driven:
+Only populate remaining time when `config.timerDuration().isTimed()` is true:
 
-* If `ASK_WINNER_KNOWLEDGE`: show dialog, call `reportWinnerKnowledge`, then **return**
-* Let the subsequent `gameStateUpdated/gameFinished` event drive the next outcome rendering
+* If untimed: set remaining to `null` (so views fall back to “no timer” behavior)
+* If timed: use the timer values
 
-This removes a race/consistency hazard and makes your “events are authoritative” rule real.
-
----
-
-### 2) Rename or split `gameFinished` (semantic clarity)
-
-Right now `GameEventKind.gameFinished` is used for:
-
-* truly finished games (`status == finished`)
-* *also* “stop gameplay and ask something” (`awaitingWinnerKnowledge`, last chance prompt)
-
-That’s fine mechanically, but semantically confusing and encourages UI-side inference.
-
-**Recommendation (minimal)**
-Keep `gameFinished`, but add a second kind such as:
-
-* `uiInterruption` (for last-chance/knowledge prompt), or
-* `outcomeAvailable`
-
-…and only use `gameFinished` when `status == finished` (or `soloChase` if you treat that as terminal UI state).
-
-This is low risk and reduces future “why did gameFinished fire here?” confusion.
+This is the most important correctness fix in the tar.
 
 ---
 
-### 3) Remove redundant “mapDifficulty” plumbing in `BaseGamePanel`
+### 2) KeyboardPanel styling bug: unused letters can become white on default background
 
-`BaseGamePanel.mapDifficulty(DifficultyView value)` returns the same type with a null default; it’s dead weight.
+In `KeyboardPanel.applyStyles(...)` you always do:
+
+```java
+button.setForeground(Color.WHITE);
+```
+
+Even for unused keys where background is null (LAF-dependent), this can make unused letters hard to read.
 
 **Recommendation**
-Inline the null default where used, delete the method.
+Set foreground based on whether the key is unused:
+
+* `unused` → default background, `opaque=false`, `foreground=BLACK`
+* used → colored background, `opaque=true`, `foreground=WHITE`
+
+Small change, immediate UX improvement.
 
 ---
 
-### 4) Tighten the “timer tick” update model (optional, but simplifies UI)
+### 3) Outcome prompting logic can ask “Did you know the word?” in cases it shouldn’t
 
-You currently publish timer ticks via `onTimerEvent(TimerView)` **and** also compute remaining time inside `GameUiModelMapper` via `turnTimer.getRemainingFor(...)`.
+`GameOutcomePresenter` asks winner knowledge in `finished` whenever `winnerKnewWord == null`:
 
-This duplication is not wrong, but it gives you two ways to render time and can drift.
+```java
+if (winnerKnewWord == null) { ASK_WINNER_KNOWLEDGE }
+```
+
+But `GameState.handleTimeout(...)` can finish a game without any “knew word” concept, leaving `winnerKnewWord` null. That can lead to nonsensical prompting after a timeout.
 
 **Recommendation**
-Pick one:
+You need an explicit “why did the game finish?” signal available to the presenter. Minimal options:
 
-* **Option A (simplest UI):** only use `TimerView` tick events for updating labels; `GameUiModel` includes the initial duration and maybe last-known remaining
-* **Option B (pure snapshot):** remove `TimerView` events and publish only `gameStateUpdated` snapshots on ticks (may be heavier)
+* Add to `GameUiModel`: `FinishReasonView { guessed, timeout, giveUp, … }`
+* Or add per-player finish states (`finishedSuccess/finishedFail/notFinished`) to the UI model and infer “timeout”/forfeit
 
-Given Swing and small UI: Option A is fine; just avoid mixing both pathways in the same screen.
+Then: only prompt winner knowledge when the finish reason is “guessed”.
 
----
+## Medium-value cleanup
 
-## Medium-value recommendations (cleanup, not urgent)
+### 4) Remove unused/ambiguous event kind
 
-### 5) Remove unused parameters and tighten signatures
-
-`AppController.startGame(GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, ...)` takes `playerOne/playerTwo` but doesn’t use them.
+`GameEventKind.timerUpdated` exists but is not used in the `onGameStateEvent` switch; timer ticks come through `onTimerEvent(TimerView)`.
 
 **Recommendation**
-Drop unused params. This reduces “phantom dependencies”.
+Either:
 
----
+* remove `timerUpdated`, or
+* actually publish it and handle it (but you already have `onTimerEvent`, so removing is cleaner).
 
-### 6) DTO-ize the remaining “service screens” (only if they start to hurt)
+### 5) Remove redundant null checks in panels
 
-Your gameplay panels are DTO-only; some non-game flows still accept model types via the controller surface (e.g., `addGameLogEntry(model.GameLogEntry)`).
+`MultiplayerGamePanel.onGameFinished()` does `if (vm == null) return;` and later repeats `if (vm == null) return;`.
 
-Not a correctness issue, but if you want a consistent rule:
+**Recommendation**
+Delete the second check. Same class of cleanup exists in a couple places.
 
-* expose `GameLogEntryView` inputs/outputs only, and map inside controller/service
+### 6) Disable input when status is `awaitingWinnerKnowledge`
 
----
+In multiplayer, the UI can remain enabled based on “currentPlayer != finished”, but the controller rejects guesses in `awaitingWinnerKnowledge`.
 
-## One thing to *not* do
+**Recommendation**
+In `updateCurrentPlayerLabelFromModel()` (or a centralized “setInputEnabled” helper), disable input when:
 
-Do **not** let anyone refactor `GameState` into a formal State pattern. Your current state machine is already testable and constrained; that refactor is high-risk for near-zero payoff.
+* `status == awaitingWinnerKnowledge`
+  Enable when:
+* `inProgress`, `waitingForFinalGuess`, `soloChase`
 
----
+## What I would not refactor right now
 
-## If you want a single next task that pays off immediately
+* No State-pattern rewrite of `GameState`
+* No additional splitting of `GameSessionService` unless you’re adding persistence/networking
+* No more DTO boundary churn in gameplay UI; that part is already working
 
-**Fix the winner-knowledge prompt flow** (#1). It’s the only item above that can plausibly bite you as a real bug under timing/event ordering, and it’s a small change.
+## Suggested next commit (highest ROI)
 
-If you tell me whether you want the prompt-handling to be driven by a dedicated event kind (recommended) or just by `status` in the snapshot, I’ll give you a precise, file-by-file edit plan.
+1. Fix `GameUiModelMapper` to only expose remaining time for timed games
+2. Fix `KeyboardPanel` foreground/background logic
+3. Add `finishReason` (or finish-state fields) to `GameUiModel` and update `GameOutcomePresenter` to avoid knowledge prompts on timeout
+
+If you want, I can point to the exact lines/files to change for (1) and (2) and the smallest schema change for (3) that won’t cascade through your code.

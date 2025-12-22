@@ -153,7 +153,7 @@ public class GameSessionService implements TurnTimer.Listener {
         currentGameState.handleTimeout(player);
         turnTimer.stop();
         publishTimer(slot, 0);
-        publish(GameEventKind.timerExpired);
+        publishState(GameEventKind.timerExpired);
         publishState(GameEventKind.gameFinished);
     }
 

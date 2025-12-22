@@ -110,19 +110,18 @@ class MultiplayerGamePanel extends BaseGamePanel {
             return;
         }
 
-        var toShow = vm;
         if (vm.nextAction() == NextAction.ASK_WINNER_KNOWLEDGE) {
             int choice = JOptionPane.showConfirmDialog(this, vm.message(), vm.title(), JOptionPane.YES_NO_OPTION);
             boolean finalWinnerKnew = (choice == JOptionPane.YES_OPTION);
             appController.reportWinnerKnowledge(finalWinnerKnew);
-            toShow = outcomePresenter.build(uiModel);
+            return; // wait for next event to render outcome
         }
 
-        if (toShow == null) {
+        if (vm == null) {
             return;
         }
 
-        OutcomeRenderer.render(this, toShow);
+        OutcomeRenderer.render(this, vm);
         navigation.showGameSetup();
     }
 

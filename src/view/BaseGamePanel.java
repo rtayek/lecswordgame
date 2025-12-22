@@ -84,11 +84,7 @@ abstract class BaseGamePanel extends JPanel implements GameEventListener {
         }
         label.setForeground(isTimerRed ? Color.RED : Color.BLACK);
     }
-    
-    protected controller.events.DifficultyView mapDifficulty(controller.events.DifficultyView value) {
-        return value == null ? controller.events.DifficultyView.normal : value;
-    }
-    
+
     @Override
     public void onGameStateEvent(controller.events.GameEventKind kind, GameUiModel view) {
         switch (kind) {
@@ -114,7 +110,7 @@ abstract class BaseGamePanel extends JPanel implements GameEventListener {
         renderGuesses(model, 0);
         updateCurrentPlayerLabelFromModel();
         updateTimersFromModel(model);
-        keyboardPanel.apply(model.keyboard(), mapDifficulty(model.difficulty()));
+        keyboardPanel.apply(model.keyboard(), model.difficulty() == null ? controller.events.DifficultyView.normal : model.difficulty());
     }
 
     protected void onGameStateUpdated(GameUiModel model) {
@@ -123,13 +119,13 @@ abstract class BaseGamePanel extends JPanel implements GameEventListener {
         renderGuesses(model, previousGuessCount);
         updateCurrentPlayerLabelFromModel();
         updateTimersFromModel(model);
-        keyboardPanel.apply(model.keyboard(), mapDifficulty(model.difficulty()));
+        keyboardPanel.apply(model.keyboard(), model.difficulty() == null ? controller.events.DifficultyView.normal : model.difficulty());
     }
 
     private void renderGuesses(GameUiModel model, int alreadyRendered) {
         var guesses = model.guesses();
         if (guesses == null) return;
-        var diff = mapDifficulty(model.difficulty());
+        var diff = model.difficulty() == null ? controller.events.DifficultyView.normal : model.difficulty();
         for (int i = alreadyRendered; i < guesses.size(); i++) {
             addGuessRow(guesses.get(i), diff);
         }
