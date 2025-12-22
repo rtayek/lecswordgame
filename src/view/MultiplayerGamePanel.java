@@ -2,7 +2,6 @@ package view;
 
 import controller.AppController;
 import controller.GameOutcomePresenter;
-import controller.TurnTimer;
 import controller.api.Navigation;
 import view.OutcomeRenderer;
 import controller.events.GameEvent;
@@ -173,19 +172,19 @@ class MultiplayerGamePanel extends BaseGamePanel {
     }
 
     @Override
-    public void onTimeUpdated(model.GamePlayer player, int remainingSeconds) {
-        if (lastModel == null || player == null || player.profile() == null) return;
-        if (lastModel.playerOne() != null && lastModel.playerOne().equals(player.profile().username())) {
-            updateTimerLabel(playerOneTimerLabel, remainingSeconds);
-        } else if (lastModel.playerTwo() != null && lastModel.playerTwo().equals(player.profile().username())) {
-            updateTimerLabel(playerTwoTimerLabel, remainingSeconds);
+    void updateTimersFromModel(GameUiModel model) {
+        if (model == null) return;
+        Integer p1 = model.playerOneRemaining();
+        Integer p2 = model.playerTwoRemaining();
+        int defaultSeconds = model.timerDurationSeconds();
+        updateTimerLabel(playerOneTimerLabel, p1 != null ? p1 : defaultSeconds);
+        updateTimerLabel(playerTwoTimerLabel, p2 != null ? p2 : defaultSeconds);
+        if (p1 != null && p1 <= 0) {
+            String name = model.playerOne() == null ? "Player" : model.playerOne();
+            setStatus(name + " ran out of time!");
+        } else if (p2 != null && p2 <= 0) {
+            String name = model.playerTwo() == null ? "Player" : model.playerTwo();
+            setStatus(name + " ran out of time!");
         }
-    }
-
-    @Override
-    public void onTimeExpired(model.GamePlayer player) {
-        if (player == null || player.profile() == null) return;
-        String name = player.profile().username();
-        setStatus((name == null || name.isBlank() ? "Player" : name) + " ran out of time!");
     }
 }

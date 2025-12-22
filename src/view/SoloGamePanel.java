@@ -2,7 +2,6 @@ package view;
 
 import controller.AppController;
 import controller.GameOutcomePresenter;
-import controller.TurnTimer;
 import controller.api.Navigation;
 import view.OutcomeRenderer;
 import controller.events.GameEvent;
@@ -103,16 +102,13 @@ class SoloGamePanel extends BaseGamePanel {
     }
     
     @Override
-    public void onTimeUpdated(model.GamePlayer player, int remainingSeconds) {
-        if (lastModel == null || player == null || player.profile() == null) return;
-        if (!player.profile().username().equals(lastModel.playerOne())) return; // Only update for solo human
-        updateTimerLabel(playerTimerLabel, remainingSeconds);
-    }
-
-    @Override
-    public void onTimeExpired(model.GamePlayer player) {
-        if (lastModel == null || player == null || player.profile() == null) return;
-        if (!player.profile().username().equals(lastModel.playerOne())) return;
-        setStatus(player.profile().username() + " ran out of time!");
+    void updateTimersFromModel(GameUiModel model) {
+        if (model == null) return;
+        Integer remaining = model.playerOneRemaining();
+        int value = remaining != null ? remaining : model.timerDurationSeconds();
+        updateTimerLabel(playerTimerLabel, value);
+        if (remaining != null && remaining <= 0) {
+            setStatus((model.playerOne() == null ? "Player" : model.playerOne()) + " ran out of time!");
+        }
     }
 }

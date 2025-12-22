@@ -125,19 +125,23 @@ public class GameSessionService implements TurnTimer.Listener {
             if (after == GameStatus.waitingForFinalGuess
                     && currentGameState.getConfig().timerDuration().isTimed()
                     && currentGameState.getCurrentTurn() != null) {
-                turnTimer.start(currentGameState.getCurrentTurn());
+                var slot = slotFor(currentGameState.getCurrentTurn());
+                if (slot != null) {
+                    turnTimer.start(slot);
+                }
             }
         }
     }
 
     @Override
-    public void onTimeUpdated(GamePlayer player, int remainingSeconds) {
-        // Panels listen directly for UI updates; no domain action needed here.
+    public void onTimeUpdated(PlayerSlot slot, int remainingSeconds) {
+        if (currentGameState == null || slot == null) return;
+        publish(GameEventKind.gameStateUpdated);
     }
 
     @Override
-    public void onTimeExpired(GamePlayer player) {
-        if (currentGameState == null || player == null) {
+    public void onTimeExpired(PlayerSlot slot) {
+        if (currentGameState == null || slot == null) {
             return;
         }
         if (!currentGameState.getConfig().timerDuration().isTimed()) {
@@ -146,6 +150,7 @@ public class GameSessionService implements TurnTimer.Listener {
         if (currentGameState.getStatus() == GameStatus.finished) {
             return;
         }
+        GamePlayer player = playerForSlot(slot);
         currentGameState.handleTimeout(player);
         turnTimer.stop();
         publish(GameEventKind.timerExpired);
@@ -200,6 +205,25 @@ public class GameSessionService implements TurnTimer.Listener {
     private String name(model.GamePlayer player) {
         if (player == null || player.profile() == null || player.profile().username() == null) return null;
         return player.profile().username();
+    }
+
+    private PlayerSlot slotFor(GamePlayer player) {
+        if (player == null || currentGameState == null || currentGameState.getConfig() == null) return null;
+        if (player.equals(currentGameState.getConfig().playerOne())) {
+            return PlayerSlot.playerOne;
+        }
+        if (player.equals(currentGameState.getConfig().playerTwo())) {
+            return PlayerSlot.playerTwo;
+        }
+        return null;
+    }
+
+    private GamePlayer playerForSlot(PlayerSlot slot) {
+        if (slot == null || currentGameState == null || currentGameState.getConfig() == null) return null;
+        return switch (slot) {
+            case playerOne -> currentGameState.getConfig().playerOne();
+            case playerTwo -> currentGameState.getConfig().playerTwo();
+        };
     }
 
     private controller.events.KeyboardView buildKeyboardView(GameState state) {

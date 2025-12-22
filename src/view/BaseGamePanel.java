@@ -2,7 +2,6 @@ package view;
 
 import controller.AppController;
 import controller.GameOutcomePresenter;
-import controller.TurnTimer;
 import controller.api.Navigation;
 import controller.events.GameEvent;
 import controller.events.GameEventListener;
@@ -14,11 +13,10 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
-abstract class BaseGamePanel extends JPanel implements TurnTimer.Listener, GameEventListener {
+abstract class BaseGamePanel extends JPanel implements GameEventListener {
 
     protected final AppController appController;
     protected final Navigation navigation;
-    protected final TurnTimer timerController;
     protected final GameOutcomePresenter outcomePresenter;
     protected final JTextField guessField;
     protected final KeyboardPanel keyboardPanel;
@@ -29,11 +27,9 @@ abstract class BaseGamePanel extends JPanel implements TurnTimer.Listener, GameE
     BaseGamePanel(Navigation navigation, AppController appController) {
         this.navigation = navigation;
         this.appController = appController;
-        this.timerController = navigation.getTimerController();
         this.outcomePresenter = new GameOutcomePresenter();
 
         appController.addGameEventListener(this);
-        timerController.addListener(this);
 
         setLayout(new BorderLayout(8, 8));
 
@@ -114,6 +110,7 @@ abstract class BaseGamePanel extends JPanel implements TurnTimer.Listener, GameE
         submitButton.setEnabled(true);
         renderGuesses(model, 0);
         updateCurrentPlayerLabelFromModel();
+        updateTimersFromModel(model);
         keyboardPanel.apply(model.keyboard(), mapDifficulty(model.difficulty()));
     }
 
@@ -122,6 +119,7 @@ abstract class BaseGamePanel extends JPanel implements TurnTimer.Listener, GameE
         lastModel = model;
         renderGuesses(model, previousGuessCount);
         updateCurrentPlayerLabelFromModel();
+        updateTimersFromModel(model);
         keyboardPanel.apply(model.keyboard(), mapDifficulty(model.difficulty()));
     }
 
@@ -137,6 +135,8 @@ abstract class BaseGamePanel extends JPanel implements TurnTimer.Listener, GameE
     abstract void onGameFinished(GameUiModel uiModel);
     
     abstract void addGuessRow(controller.events.GuessView guessView, controller.events.DifficultyView difficulty);
+
+    abstract void updateTimersFromModel(GameUiModel model);
 
     abstract void updateCurrentPlayerLabelFromModel();
 }
