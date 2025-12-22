@@ -8,10 +8,12 @@ import controller.events.GuessView;
 import controller.events.KeyboardView;
 import controller.events.LetterFeedbackView;
 import controller.events.PlayerSlot;
+import controller.events.FinishStateView;
 import java.util.List;
 import model.GamePlayer;
 import model.GameState;
 import model.enums.GameStatus;
+import model.enums.FinishState;
 
 /**
  * Maps domain game state to view-friendly snapshots.
@@ -34,10 +36,11 @@ class GameUiModelMapper {
         String winnerName = state.getWinner() == null ? null : name(state.getWinner());
         String provisional = state.getProvisionalWinner() == null ? null : name(state.getProvisionalWinner());
 
-        Integer p1Remaining = turnTimer != null && config.playerOne() != null
+        boolean timed = config.timerDuration() != null && config.timerDuration().isTimed();
+        Integer p1Remaining = (turnTimer != null && config.playerOne() != null && timed)
                 ? turnTimer.getRemainingFor(PlayerSlot.playerOne)
                 : null;
-        Integer p2Remaining = turnTimer != null && config.playerTwo() != null
+        Integer p2Remaining = (turnTimer != null && config.playerTwo() != null && timed)
                 ? turnTimer.getRemainingFor(PlayerSlot.playerTwo)
                 : null;
         int timerSeconds = config.timerDuration() != null ? config.timerDuration().seconds() : 0;
@@ -57,6 +60,8 @@ class GameUiModelMapper {
                 winnerName,
                 provisional,
                 state.getWinnerKnewWord(),
+                mapFinishState(state.getPlayerFinishState(config.playerOne())),
+                mapFinishState(state.getPlayerFinishState(config.playerTwo())),
                 playerOneName,
                 playerTwoName,
                 timerSeconds,
@@ -110,6 +115,15 @@ class GameUiModelMapper {
             case normal -> DifficultyView.normal;
             case hard -> DifficultyView.hard;
             case expert -> DifficultyView.expert;
+        };
+    }
+
+    private FinishStateView mapFinishState(FinishState state) {
+        if (state == null) return FinishStateView.notFinished;
+        return switch (state) {
+            case notFinished -> FinishStateView.notFinished;
+            case finishedSuccess -> FinishStateView.finishedSuccess;
+            case finishedFail -> FinishStateView.finishedFail;
         };
     }
 }

@@ -117,10 +117,6 @@ class MultiplayerGamePanel extends BaseGamePanel {
             return; // wait for next event to render outcome
         }
 
-        if (vm == null) {
-            return;
-        }
-
         OutcomeRenderer.render(this, vm);
         navigation.showGameSetup();
     }

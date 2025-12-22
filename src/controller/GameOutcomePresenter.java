@@ -10,6 +10,8 @@ public class GameOutcomePresenter {
     public OutcomeViewModel build(controller.events.GameUiModel state) {
         if (state == null) return null;
         Boolean winnerKnewWord = state.winnerKnewWord();
+        var p1Finish = state.playerOneFinishState();
+        var p2Finish = state.playerTwoFinishState();
 
         return switch (state.status()) {
             case waitingForFinalGuess -> {
@@ -34,12 +36,14 @@ public class GameOutcomePresenter {
                     yield new OutcomeViewModel("Game Result", "It's a Tie! Both players guessed the word.", "tie.png", SoundEffect.tie, NextAction.NONE);
                 }
 
-                if (winnerKnewWord == null) {
+                boolean finishedByTimeout = finishedByTimeout(p1Finish, p2Finish);
+
+                if (!finishedByTimeout && winnerKnewWord == null) {
                     String ask = String.format("%s, you guessed the word! Did you know this word?", safeName(winner));
                     yield new OutcomeViewModel("Win Condition", ask, null, null, NextAction.ASK_WINNER_KNOWLEDGE);
                 }
 
-                if (!winnerKnewWord) {
+                if (!finishedByTimeout && winnerKnewWord != null && !winnerKnewWord) {
                     String msg = String.format("Congratulations, %s! You won because you didn't know the word!", safeName(winner));
                     yield new OutcomeViewModel(winner + " Wins!", msg, "win.png", SoundEffect.win, NextAction.NONE);
                 }
@@ -53,5 +57,10 @@ public class GameOutcomePresenter {
     
     private String safeName(String name) {
         return (name == null || name.isBlank()) ? "Player" : name;
+    }
+
+    private boolean finishedByTimeout(controller.events.FinishStateView p1, controller.events.FinishStateView p2) {
+        // Timeout path marks loser as finishedFail; if any player is finishedFail, treat as timeout/forfeit.
+        return p1 == controller.events.FinishStateView.finishedFail || p2 == controller.events.FinishStateView.finishedFail;
     }
 }

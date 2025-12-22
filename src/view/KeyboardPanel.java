@@ -72,11 +72,12 @@ class KeyboardPanel extends JPanel {
                 if (bgColor != null) {
                     button.setBackground(bgColor);
                     button.setOpaque(true);
+                    button.setForeground(Color.WHITE);
                 } else {
                     button.setBackground(null);
                     button.setOpaque(false);
+                    button.setForeground(Color.BLACK);
                 }
-                button.setForeground(Color.WHITE); // Default text color for used letters
             }
         }
         repaint();
