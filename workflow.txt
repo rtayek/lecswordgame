@@ -1,8 +1,14 @@
-put response from codex into chats/codex.md 
 make tar and give tar to chat and ask it to analyze and recommend.
 wait
-get response from chat and put into chats/name.md
-git add,commit, and push.
-delete contents of codex.md  (sigal that we need to give the prompt to codex).
+get response from chat .
+clear chat.md and addresponse or append to chatmd. (remember main status and recommendations).
+git add,commit (save the all the .mds).
+
+delete contents of codex.md  (remove what happend lat time. sigal nothing hapened yet).
+git add, commit, and push.
+
 give prompt to codex
 wait
+put response from codex into chats/codex.md (remember codex status and recommendations for this time).
+	fix any erroes
+	add codex responses to codex.md

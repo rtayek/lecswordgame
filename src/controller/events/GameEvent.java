@@ -7,6 +7,7 @@ public record GameEvent(GameEventKind kind, GameUiModel view) {
     public enum GameEventKind {
         gameStarted,
         gameStateUpdated,
+        timerUpdated,
         gameFinished,
         timerExpired
     }

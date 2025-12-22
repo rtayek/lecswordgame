@@ -1,7 +1,6 @@
 package controller.api;
 
 import controller.WordSelectionViewData;
-import controller.TurnTimer;
 
 public interface Navigation {
     void showLanding();
@@ -14,5 +13,4 @@ public interface Navigation {
     void showWordSelection(WordSelectionViewData data);
     void showMultiplayerGame();
     void showSoloGame();
-    TurnTimer getTimerController();
 }

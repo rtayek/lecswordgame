@@ -111,8 +111,8 @@ class KeyboardPanel extends JPanel {
             letterStates.put(c, LetterFeedbackView.unused);
         }
         if (keyboardView != null && keyboardView.keyStates() != null) {
-            for (Map.Entry<Character, String> e : keyboardView.keyStates().entrySet()) {
-                var fb = toFeedback(e.getValue());
+            for (Map.Entry<Character, LetterFeedbackView> e : keyboardView.keyStates().entrySet()) {
+                var fb = e.getValue() == null ? LetterFeedbackView.unused : e.getValue();
                 letterStates.put(Character.toUpperCase(e.getKey()), fb);
             }
         }
@@ -121,14 +121,4 @@ class KeyboardPanel extends JPanel {
 
     static final long serialVersionUID = 1L;
 
-    private LetterFeedbackView toFeedback(String value) {
-        if (value == null) return LetterFeedbackView.unused;
-        return switch (value.toLowerCase()) {
-            case "correct" -> LetterFeedbackView.correct;
-            case "present" -> LetterFeedbackView.present;
-            case "absent" -> LetterFeedbackView.absent;
-            case "used" -> LetterFeedbackView.absent; // used but unknown -> gray
-            default -> LetterFeedbackView.unused;
-        };
-    }
 }

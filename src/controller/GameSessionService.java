@@ -15,9 +15,8 @@ import controller.TurnTimer;
 import controller.events.GameEvent;
 import controller.events.GameEvent.GameEventKind;
 import controller.events.GameEventListener;
-import controller.events.GameUiModel;
-import controller.events.GameStatusView;
-import controller.events.DifficultyView;
+import controller.GameUiModelMapper;
+import controller.KeyboardViewBuilder;
 
 /**
  * Orchestrates the lifecycle of a single game session and fans out state/events.
@@ -26,6 +25,7 @@ public class GameSessionService implements TurnTimer.Listener {
 
     private final GameController gameController;
     private final TurnTimer turnTimer;
+    private final GameUiModelMapper uiMapper;
 
     private GameState currentGameState;
     private final List<GameEventListener> eventListeners = new ArrayList<>();
@@ -34,6 +34,7 @@ public class GameSessionService implements TurnTimer.Listener {
         this.gameController = gameController;
         this.turnTimer = turnTimer;
         this.turnTimer.addListener(this);
+        this.uiMapper = new GameUiModelMapper(turnTimer, new KeyboardViewBuilder());
     }
 
     public void addEventListener(GameEventListener listener) {
@@ -136,7 +137,7 @@ public class GameSessionService implements TurnTimer.Listener {
     @Override
     public void onTimeUpdated(PlayerSlot slot, int remainingSeconds) {
         if (currentGameState == null || slot == null) return;
-        publish(GameEventKind.gameStateUpdated);
+        publish(GameEventKind.timerUpdated);
     }
 
     @Override
@@ -158,53 +159,10 @@ public class GameSessionService implements TurnTimer.Listener {
     }
 
     private void publish(GameEventKind kind) {
-        var event = new GameEvent(kind, toUiModel(currentGameState));
+        var event = new GameEvent(kind, uiMapper.toUiModel(currentGameState));
         for (GameEventListener l : eventListeners) {
             l.onGameEvent(event);
         }
-    }
-
-    private GameUiModel toUiModel(GameState state) {
-        if (state == null) return null;
-        String playerOneName = name(state.getConfig().playerOne());
-        String playerTwoName = name(state.getConfig().playerTwo());
-        String winnerName = state.getWinner() == null ? null : name(state.getWinner());
-        String provisional = state.getProvisionalWinner() == null ? null : name(state.getProvisionalWinner());
-        Integer p1Remaining = turnTimer != null && state.getConfig().playerOne() != null
-                ? turnTimer.getRemainingFor(PlayerSlot.playerOne)
-                : null;
-        Integer p2Remaining = turnTimer != null && state.getConfig().playerTwo() != null
-                ? turnTimer.getRemainingFor(PlayerSlot.playerTwo)
-                : null;
-        int timerSeconds = state.getConfig().timerDuration() != null ? state.getConfig().timerDuration().seconds() : 0;
-        var guesses = state.getGuesses().stream()
-                .map(g -> new controller.events.GuessView(
-                        name(g.player()),
-                        state.getConfig().playerOne() != null && g.player().equals(state.getConfig().playerOne()),
-                        toView(g.result())))
-                .toList();
-        var keyboard = buildKeyboardView(state);
-        return new GameUiModel(
-                state.getId(),
-                mapStatus(state.getStatus()),
-                mapDifficulty(state.getConfig().difficulty()),
-                name(state.getCurrentTurn()),
-                winnerName,
-                provisional,
-                state.getWinnerKnewWord(),
-                playerOneName,
-                playerTwoName,
-                timerSeconds,
-                p1Remaining,
-                p2Remaining,
-                List.copyOf(guesses),
-                keyboard
-        );
-    }
-
-    private String name(model.GamePlayer player) {
-        if (player == null || player.profile() == null || player.profile().username() == null) return null;
-        return player.profile().username();
     }
 
     private PlayerSlot slotFor(GamePlayer player) {
@@ -223,99 +181,6 @@ public class GameSessionService implements TurnTimer.Listener {
         return switch (slot) {
             case playerOne -> currentGameState.getConfig().playerOne();
             case playerTwo -> currentGameState.getConfig().playerTwo();
-        };
-    }
-
-    private controller.events.KeyboardView buildKeyboardView(GameState state) {
-        var keyStates = new java.util.HashMap<Character, String>();
-        var difficulty = state.getConfig().difficulty();
-
-        java.util.function.BiFunction<String, String, String> merge = (oldV, newV) -> {
-            if (oldV == null) return newV;
-            int oldS = strength(oldV);
-            int newS = strength(newV);
-            return newS > oldS ? newV : oldV;
-        };
-
-        state.getGuesses().forEach(g -> {
-            var guess = g.result().guess();
-            var feedback = g.result().feedback();
-
-            if (difficulty == model.enums.Difficulty.expert) {
-                for (int i = 0; i < guess.length(); i++) {
-                    char c = Character.toUpperCase(guess.charAt(i));
-                    keyStates.put(c, merge.apply(keyStates.get(c), "used"));
-                }
-                return;
-            }
-
-            int n = Math.min(guess.length(), feedback.size());
-            for (int i = 0; i < n; i++) {
-                char c = Character.toUpperCase(guess.charAt(i));
-                var fb = feedback.get(i);
-                if (fb == null) continue;
-
-                String v = switch (fb) {
-                    case correct -> "correct";
-                    case present -> "present";
-                    case notPresent -> "absent";
-                    default -> "used";
-                };
-
-                keyStates.put(c, merge.apply(keyStates.get(c), v));
-            }
-        });
-
-        return new controller.events.KeyboardView(java.util.Map.copyOf(keyStates));
-    }
-
-    private int strength(String v) {
-        return switch (v) {
-            case "correct" -> 3;
-            case "present" -> 2;
-            case "absent" -> 1;
-            default -> 0; // "used"
-        };
-    }
-
-    private controller.events.GuessResultView toView(model.GuessResult result) {
-        var feedbackView = result.feedback().stream()
-                .map(fb -> {
-                    if (fb == null) return controller.events.LetterFeedbackView.unused;
-                    return switch (fb) {
-                        case correct -> controller.events.LetterFeedbackView.correct;
-                        case present -> controller.events.LetterFeedbackView.present;
-                        case notPresent -> controller.events.LetterFeedbackView.absent;
-                        default -> controller.events.LetterFeedbackView.unused;
-                    };
-                })
-                .toList();
-        return new controller.events.GuessResultView(
-                result.guess(),
-                java.util.List.copyOf(feedbackView),
-                result.correctLetterCount(),
-                result.exactMatch()
-        );
-    }
-
-    private GameStatusView mapStatus(GameStatus status) {
-        if (status == null) return GameStatusView.setup;
-        return switch (status) {
-            case setup -> GameStatusView.setup;
-            case inProgress -> GameStatusView.inProgress;
-            case awaitingWinnerKnowledge -> GameStatusView.awaitingWinnerKnowledge;
-            case waitingForFinalGuess -> GameStatusView.waitingForFinalGuess;
-            case soloChase -> GameStatusView.soloChase;
-            case finished -> GameStatusView.finished;
-        };
-    }
-
-    private DifficultyView mapDifficulty(model.enums.Difficulty difficulty) {
-        if (difficulty == null) return DifficultyView.normal;
-        return switch (difficulty) {
-            case normal -> DifficultyView.normal;
-            case hard -> DifficultyView.hard;
-            case expert -> DifficultyView.expert;
         };
     }
 }

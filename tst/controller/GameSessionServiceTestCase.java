@@ -1,7 +1,7 @@
 package controller;
 
+import controller.events.PlayerSlot;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import model.GameState;
 import model.PlayerProfile;
 import model.WordChoice;
@@ -12,20 +12,13 @@ import model.enums.GameStatus;
 import model.enums.TimerDuration;
 import model.enums.WordLength;
 import model.enums.WordSource;
-import controller.events.PlayerSlot;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Lightweight self-checks without JUnit dependency.
- */
-public final class GameSessionServiceTest {
+class GameSessionServiceTestCase {
 
-    public static void main(String[] args) {
-        firstCorrectGuessInMultiplayerTriggersKnowledge();
-        opponentWinsOnTimeout();
-        System.out.println("GameSessionServiceTest passed");
-    }
-
-    private static void firstCorrectGuessInMultiplayerTriggersKnowledge() {
+    @Test
+    void firstCorrectGuessInMultiplayerTriggersKnowledge() {
         var p1 = new model.GamePlayer(new PlayerProfile("P1", ""), true);
         var p2 = new model.GamePlayer(new PlayerProfile("P2", ""), true);
         var cfg = new GameState.GameConfig(GameMode.multiplayer, Difficulty.normal, WordLength.five, TimerDuration.none, p1, p2);
@@ -34,18 +27,13 @@ public final class GameSessionServiceTest {
 
         session.submitGuess("GRAPE"); // p1 guessing p2's word
 
-        if (state.getStatus() != GameStatus.awaitingWinnerKnowledge) {
-            throw new AssertionError("Expected awaitingWinnerKnowledge after first success");
-        }
-        if (state.getPlayerFinishState(p1) != FinishState.finishedSuccess) {
-            throw new AssertionError("Current player should be marked finishedSuccess");
-        }
-        if (state.getWinner() != null) {
-            throw new AssertionError("Winner undecided until knowledge check");
-        }
+        assertEquals(GameStatus.awaitingWinnerKnowledge, state.getStatus(), "Expected awaitingWinnerKnowledge after first success");
+        assertEquals(FinishState.finishedSuccess, state.getPlayerFinishState(p1), "Current player should be marked finishedSuccess");
+        assertNull(state.getWinner(), "Winner undecided until knowledge check");
     }
 
-    private static void opponentWinsOnTimeout() {
+    @Test
+    void opponentWinsOnTimeout() {
         AtomicBoolean stopped = new AtomicBoolean(false);
         var timer = new NoopTimer() {
             @Override
@@ -61,18 +49,10 @@ public final class GameSessionServiceTest {
 
         session.onTimeExpired(PlayerSlot.playerOne);
 
-        if (state.getStatus() != GameStatus.finished) {
-            throw new AssertionError("Timeout should finish the game");
-        }
-        if (state.getWinner() != p2) {
-            throw new AssertionError("Opponent should win on timeout");
-        }
-        if (!stopped.get()) {
-            throw new AssertionError("Timer should stop on finish");
-        }
-        if (state.getPlayerFinishState(p1) != FinishState.finishedFail) {
-            throw new AssertionError("Expired player should be marked failed");
-        }
+        assertEquals(GameStatus.finished, state.getStatus(), "Timeout should finish the game");
+        assertEquals(p2, state.getWinner(), "Opponent should win on timeout");
+        assertTrue(stopped.get(), "Timer should stop on finish");
+        assertEquals(FinishState.finishedFail, state.getPlayerFinishState(p1), "Expired player should be marked failed");
     }
 
     private static class NoopTimer implements TurnTimer {

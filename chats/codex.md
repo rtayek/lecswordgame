@@ -1,5 +1,9 @@
-Updated the tests to match the PlayerSlot-based timer API:
+Applied the requested architecture refactors:
 
-GameSessionServiceTest uses PlayerSlot for onTimeExpired, and its NoopTimer implements the new TurnTimer signatures (setTimeForPlayer/start/getRemainingFor with PlayerSlot).
-TurnTimerTest now uses PlayerSlot instead of GamePlayer, updates listeners to the new method signatures, and sets/starts the timer with a slot.
-Rebuild should clear the 17 errors you listed.
+Removed module-info.java to keep tests on the classpath.
+Added GameUiModelMapper and KeyboardViewBuilder to cleanly map domain state and keyboard data; GameSessionService now uses them and no longer builds UI snapshots inline.
+Typed KeyboardView to Map<Character, LetterFeedbackView> and updated KeyboardPanel to consume typed states.
+Added timerUpdated event; GameSessionService publishes it on ticks and views handle it via existing update logic.
+Eliminated timer exposure to the view layer: dropped getTimerController from Navigation/MainFrame, and AppController no longer exposes the timer.
+JUnit tests were already converted; controller tests remain under *TestCase.java.
+Please rebuild to ensure everything compiles with the new helpers and event type.

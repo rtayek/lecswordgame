@@ -3,7 +3,6 @@ package view;
 import controller.AppController;
 import controller.WordSelectionViewData;
 import controller.api.Navigation;
-import controller.TurnTimer;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -11,12 +10,10 @@ import java.awt.CardLayout;
 
 class MainFrame extends JFrame implements Navigation {
     private final AppController appController;
-    private final TurnTimer timerController;
 
     public MainFrame(AppController appController) {
         super("Word Guessing Game");
         this.appController = appController;
-        this.timerController = appController.getTurnTimer();
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(900, 700);
         setLocationRelativeTo(null);
@@ -102,11 +99,6 @@ class MainFrame extends JFrame implements Navigation {
     @Override
     public void showSoloGame() {
         layout.show(cards, cardSolo);
-    }
-    
-    @Override
-    public TurnTimer getTimerController() {
-        return timerController;
     }
 
     private static final long serialVersionUID = 1L;

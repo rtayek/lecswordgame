@@ -1,21 +1,15 @@
 package controller;
 
+import controller.events.PlayerSlot;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
-import controller.events.PlayerSlot;
+class TurnTimerTestCase {
 
-/**
- * Simple smoke test without JUnit dependency.
- */
-public final class TurnTimerTest {
-
-    public static void main(String[] args) throws Exception {
-        shouldNotifyAllListeners();
-        System.out.println("TurnTimerTest passed");
-    }
-
-    private static void shouldNotifyAllListeners() throws Exception {
+    @Test
+    void shouldNotifyAllListeners() throws Exception {
         TurnTimer timer = new TimerController();
         var slot = PlayerSlot.playerOne;
 
@@ -50,11 +44,7 @@ public final class TurnTimerTest {
         timer.setTimeForPlayer(slot, 1);
         timer.start(slot);
 
-        if (!expireLatch.await(2, TimeUnit.SECONDS)) {
-            throw new AssertionError("Listeners should receive expiry");
-        }
-        if (updateLatch.getCount() == 2) {
-            throw new AssertionError("Listeners should receive at least one update");
-        }
+        assertTrue(expireLatch.await(2, TimeUnit.SECONDS), "Listeners should receive expiry");
+        assertTrue(updateLatch.getCount() < 2, "Listeners should receive at least one update");
     }
 }

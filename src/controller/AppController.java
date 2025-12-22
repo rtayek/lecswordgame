@@ -128,10 +128,6 @@ public class AppController {
         gameSessionService.applyWinnerKnowledge(winnerKnewWord);
     }
 
-    public TurnTimer getTurnTimer() {
-        return turnTimer;
-    }
-
     public WordSelectionViewData buildWordSelectionData(GameConfig config, boolean isPlayerOneTurn) {
         if (config == null) return null;
         var opponent = isPlayerOneTurn ? config.playerTwo() : config.playerOne();
