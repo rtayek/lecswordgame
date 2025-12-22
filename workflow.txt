@@ -1,4 +1,4 @@
-give tar to chat
-get response from chat and put into response.txt
+give tar to chat and ask it to analyze and recommend.
+get response from chat and put into response.txt (has summary and new prompt).
 git add and and commit.
-give prompt to codex.
+give prompt from response to codex.

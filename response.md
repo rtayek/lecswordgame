@@ -93,3 +93,120 @@ Do you want the next round to be:
 * **behavior** (timers / win/lose prompts / hardest-words logic)?
 
 Pick one and we’ll stop spinning.
+
+second respomse.
+
+What’s already good (stop re-litigating it)
+DTO-only for guess rendering is basically done
+
+BaseGamePanel renders guess rows via:
+
+addGuessRow(controller.events.GuessView guessView, DifficultyView difficulty)
+
+
+It renders from GameUiModel.guesses() snapshots.
+
+handleGuess() is intent-only (calls controller + clears input).
+
+GameEvent has no metadata backdoor (good).
+
+So yes: the main game UI is snapshot-driven.
+
+What’s not DTO-only (the actual leak)
+Timer callbacks drag model.GamePlayer into view
+
+In this tar, the view panels still implement TurnTimer.Listener, which uses:
+
+void onTimeUpdated(model.GamePlayer player, int remainingSeconds)
+void onTimeExpired(model.GamePlayer player)
+
+
+You can see it plainly in:
+
+src/view/MultiplayerGamePanel.java
+
+src/view/SoloGamePanel.java
+
+and the root cause is src/controller/TurnTimer.java importing model.GamePlayer.
+
+So the one remaining “model leaking into view” problem is timers, not guesses.
+
+This is also why you feel like you’re looping: you “finished DTO-only” in the obvious place, but the timer interface kept the door cracked open.
+
+High-value refactorings I recommend (based on this tar)
+1) Fix TurnTimer to stop referencing model.GamePlayer
+
+Do this next. It’s small and it closes the last real coupling.
+
+Create a controller-level enum (not model):
+
+// controller/api or controller/events
+enum PlayerSlot { playerOne, playerTwo }
+
+
+Then change TurnTimer.Listener to:
+
+void onTimeUpdated(PlayerSlot slot, int remainingSeconds);
+void onTimeExpired(PlayerSlot slot);
+
+
+And change timer APIs similarly:
+
+void setTimeForPlayer(PlayerSlot slot, int seconds);
+int getRemainingFor(PlayerSlot slot);
+void start(PlayerSlot slot);
+
+
+Mapping from GamePlayer → PlayerSlot belongs in GameSessionService (controller layer), not the view.
+
+Immediate payoff:
+
+no model.* in view at all
+
+simpler timer UI updates (no username matching hacks)
+
+2) Stop making panels listen to the timer directly
+
+Right now you have:
+
+GameSessionService listening to the timer (but doing nothing on ticks)
+
+panels listening to the timer directly (and receiving model objects)
+
+That’s backwards.
+
+Better:
+
+only GameSessionService listens to timer ticks
+
+it republishes a GameEventKind.timerUpdated (or just gameStateUpdated) with an updated GameUiModel containing p1RemainingSeconds / p2RemainingSeconds
+
+panels update timer labels from the snapshot
+
+That makes timers follow the same architecture as everything else:
+
+intents in, snapshots out
+
+3) Extract the UI mapping from GameSessionService
+
+GameSessionService is doing orchestration and building GameUiModel and building keyboard state. It’s 290 lines for a reason.
+
+Extract two helpers (tiny, pure):
+
+GameUiModelMapper (domain state → GameUiModel)
+
+KeyboardViewBuilder (guesses/difficulty → keyboard view)
+
+This reduces “big ball of mud” risk without inventing patterns.
+
+4) Make KeyboardView typed (stop using "correct"/"present"/"absent"/"used" strings)
+
+Right now KeyboardView is Map<Character, String> and you compute “strength” by string comparison. That’s… charming.
+
+Make it:
+
+Map<Character, LetterFeedbackView>
+
+
+and define a strength ordering in one place. Cleaner, safer, fewer “typo makes keyboard stupid” bugs.
+
