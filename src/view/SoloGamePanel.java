@@ -4,7 +4,6 @@ import controller.AppController;
 import controller.GameOutcomePresenter;
 import controller.api.Navigation;
 import view.OutcomeRenderer;
-import controller.events.GameEvent;
 import controller.events.GameEventListener;
 import controller.events.GameUiModel;
 import java.awt.BorderLayout;

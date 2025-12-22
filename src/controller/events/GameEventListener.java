@@ -1,5 +1,6 @@
 package controller.events;
 
 public interface GameEventListener {
-    void onGameEvent(GameEvent event);
+    void onGameStateEvent(GameEventKind kind, GameUiModel view);
+    void onTimerEvent(TimerView timer);
 }

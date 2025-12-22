@@ -1,7 +1,6 @@
 package controller;
 
 import controller.api.Navigation;
-import controller.events.GameEvent;
 import controller.events.GameEventListener;
 import controller.events.GameLogEntryView;
 import controller.events.HardWordEntryView;
@@ -43,7 +42,7 @@ public class AppController {
         navigationCoordinator.setNavigation(navigation);
     }
 
-    public void requestNewGame(GameConfig config) {
+    private void requestNewGame(GameConfig config) {
         wordSelectionFlow.start(config);
         navigationCoordinator.showWordSelection(buildWordSelectionData(config, true));
     }
@@ -126,7 +125,7 @@ public class AppController {
         gameSessionService.applyWinnerKnowledge(winnerKnewWord);
     }
 
-    public WordSelectionViewData buildWordSelectionData(GameConfig config, boolean isPlayerOneTurn) {
+    private WordSelectionViewData buildWordSelectionData(GameConfig config, boolean isPlayerOneTurn) {
         if (config == null) return null;
         var opponent = isPlayerOneTurn ? config.playerTwo() : config.playerOne();
         var name = opponent != null && opponent.profile() != null ? opponent.profile().username() : "Player";

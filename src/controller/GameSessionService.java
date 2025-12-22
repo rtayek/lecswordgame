@@ -7,14 +7,12 @@ import model.GameState.GameConfig;
 import model.GamePlayer;
 import model.GuessOutcome;
 import model.WordChoice;
-import model.enums.GameMode;
 import model.enums.GameStatus;
 import model.enums.WordLength;
 import controller.events.PlayerSlot;
 import controller.TurnTimer;
-import controller.events.GameEvent;
-import controller.events.GameEvent.GameEventKind;
 import controller.events.GameEventListener;
+import controller.events.GameEventKind;
 import controller.GameUiModelMapper;
 import controller.KeyboardViewBuilder;
 
@@ -65,7 +63,7 @@ public class GameSessionService implements TurnTimer.Listener {
         } else {
             turnTimer.reset();
         }
-        publish(GameEventKind.gameStarted);
+        publishState(GameEventKind.gameStarted);
         return currentGameState;
     }
 
@@ -81,15 +79,15 @@ public class GameSessionService implements TurnTimer.Listener {
         GameStatus newStatus = outcome.status();
         GamePlayer nextTurn = outcome.nextTurn();
 
-        publish(GameEventKind.gameStateUpdated);
+        publishState(GameEventKind.gameStateUpdated);
 
         if (newStatus == GameStatus.finished) {
-            publish(GameEventKind.gameFinished);
+            publishState(GameEventKind.gameFinished);
             turnTimer.stop();
         } else if (newStatus == GameStatus.awaitingWinnerKnowledge) {
             // Pause timers while waiting for winner knowledge response.
             turnTimer.stop();
-            publish(GameEventKind.gameFinished);
+            publishState(GameEventKind.gameFinished);
         } else if (currentGameState.getConfig().timerDuration().isTimed() && nextTurn != null && nextTurn != player) {
             var slot = slotFor(nextTurn);
             if (slot != null) {
@@ -118,11 +116,11 @@ public class GameSessionService implements TurnTimer.Listener {
         GameStatus after = currentGameState.getStatus();
 
         if (after == GameStatus.finished || after == GameStatus.soloChase) {
-            publish(GameEventKind.gameFinished);
+            publishState(GameEventKind.gameFinished);
             turnTimer.stop();
         } else {
-            publish(GameEventKind.gameStateUpdated);
-            publish(GameEventKind.gameFinished);
+            publishState(GameEventKind.gameStateUpdated);
+            publishState(GameEventKind.gameFinished);
             if (after == GameStatus.waitingForFinalGuess
                     && currentGameState.getConfig().timerDuration().isTimed()
                     && currentGameState.getCurrentTurn() != null) {
@@ -156,13 +154,13 @@ public class GameSessionService implements TurnTimer.Listener {
         turnTimer.stop();
         publishTimer(slot, 0);
         publish(GameEventKind.timerExpired);
-        publish(GameEventKind.gameFinished);
+        publishState(GameEventKind.gameFinished);
     }
 
-    private void publish(GameEventKind kind) {
-        var event = new GameEvent(kind, uiMapper.toUiModel(currentGameState), null);
+    private void publishState(GameEventKind kind) {
+        var uiModel = uiMapper.toUiModel(currentGameState);
         for (GameEventListener l : eventListeners) {
-            l.onGameEvent(event);
+            l.onGameStateEvent(kind, uiModel);
         }
     }
 
@@ -187,9 +185,8 @@ public class GameSessionService implements TurnTimer.Listener {
 
     private void publishTimer(PlayerSlot slot, int remainingSeconds) {
         var timerView = new controller.events.TimerView(slot, remainingSeconds);
-        var event = new GameEvent(GameEventKind.timerUpdated, null, timerView);
         for (GameEventListener l : eventListeners) {
-            l.onGameEvent(event);
+            l.onTimerEvent(timerView);
         }
     }
 }

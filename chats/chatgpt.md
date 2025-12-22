@@ -1,131 +1,112 @@
-What’s solid now
-Timer boundary is finally correct
+I unpacked the **current tar** and did a focused architecture pass (controller/event boundaries, view imports, timer wiring, outcome flow, and the “DTO-only” claim).
 
-GameSessionService publishes timerUpdated with a TimerView(slot, remainingSeconds) and does not republish full GameUiModel on every tick.
+## What’s already in a good place (do not churn)
 
-UI does not receive a live timer controller through Navigation anymore (timer interaction is effectively service-owned).
+* **View layer is clean of domain types**: `src/view` has **no `import model.*`**. Your gameplay UI really is DTO/snapshot-driven now.
+* **Event boundary is sane**: `GameEventListener` receives `GameUiModel` and `TimerView`. No “metadata backdoor”.
+* **Timer leak is fixed**: `TurnTimer` is now keyed by `PlayerSlot`, not `model.GamePlayer`.
 
-This is the right architecture for “snapshot-driven UI + explicit timer events.”
+This is the “boring, deterministic” core you were aiming for. Treat it as frozen.
 
-Keyboard is typed end-to-end
+---
 
-KeyboardView(Map<Character, LetterFeedbackView>)
+## High-value recommendations (small, correctness-oriented)
 
-KeyboardViewBuilder merges feedback with a strength ordering and returns Map.copyOf(...)
+### 1) Fix the winner-knowledge prompt flow (currently brittle)
 
-This removes the “magic string” regression entirely.
+In `MultiplayerGamePanel.onGameFinished(...)`, when `NextAction.ASK_WINNER_KNOWLEDGE`:
 
-Mapping surface exists and is reasonably contained
+* You prompt
+* Call `appController.reportWinnerKnowledge(...)`
+* Then immediately do `outcomePresenter.build(uiModel)` again using the *old* snapshot
 
-GameUiModelMapper is package-private and does domain→view conversion in one place.
+That’s logically wrong: after reporting knowledge, the authoritative state is the **new snapshot** produced by the controller events, not the one you already have.
 
-GameSessionService.publish(...) always emits immutable DTOs.
+**Recommendation**
+Make `onGameFinished` strictly event-driven:
 
-Good.
+* If `ASK_WINNER_KNOWLEDGE`: show dialog, call `reportWinnerKnowledge`, then **return**
+* Let the subsequent `gameStateUpdated/gameFinished` event drive the next outcome rendering
 
-Top recommendations
-1) Fix GameEvent “nullable union” design
+This removes a race/consistency hazard and makes your “events are authoritative” rule real.
 
-Right now you emit:
+---
 
-state events: new GameEvent(kind, uiModel, null)
+### 2) Rename or split `gameFinished` (semantic clarity)
 
-timer events: new GameEvent(timerUpdated, null, timerView)
+Right now `GameEventKind.gameFinished` is used for:
 
-That forces every listener to remember which field is non-null. It’s easy to get wrong and it spreads null checks into UI code.
+* truly finished games (`status == finished`)
+* *also* “stop gameplay and ask something” (`awaitingWinnerKnowledge`, last chance prompt)
 
-Preferred options (pick one):
+That’s fine mechanically, but semantically confusing and encourages UI-side inference.
 
-Option A: sealed event hierarchy (cleanest)
+**Recommendation (minimal)**
+Keep `gameFinished`, but add a second kind such as:
 
-sealed interface GameEvent permits GameStateEvent, TimerEvent {
-    GameEventKind kind();
-}
+* `uiInterruption` (for last-chance/knowledge prompt), or
+* `outcomeAvailable`
 
-record GameStateEvent(GameEventKind kind, GameUiModel view) implements GameEvent { }
-record TimerEvent(GameEventKind kind, TimerView timer) implements GameEvent { }
+…and only use `gameFinished` when `status == finished` (or `soloChase` if you treat that as terminal UI state).
 
+This is low risk and reduces future “why did gameFinished fire here?” confusion.
 
-Option B: split listener methods (simplest for Swing)
+---
 
-interface GameEventListener {
-    void onGameStateEvent(GameEventKind kind, GameUiModel view);
-    void onTimerEvent(TimerView timer);
-}
+### 3) Remove redundant “mapDifficulty” plumbing in `BaseGamePanel`
 
+`BaseGamePanel.mapDifficulty(DifficultyView value)` returns the same type with a null default; it’s dead weight.
 
-Either way, you eliminate “nullable payload roulette.”
+**Recommendation**
+Inline the null default where used, delete the method.
 
-2) Make AppController DTO-only on its outward-facing surface
+---
 
-You still have:
+### 4) Tighten the “timer tick” update model (optional, but simplifies UI)
 
-public void requestNewGame(GameConfig config)
-public WordSelectionViewData buildWordSelectionData(GameConfig config, ...)
+You currently publish timer ticks via `onTimerEvent(TimerView)` **and** also compute remaining time inside `GameUiModelMapper` via `turnTimer.getRemainingFor(...)`.
 
+This duplication is not wrong, but it gives you two ways to render time and can drift.
 
-That exposes model.GameState.GameConfig to UI-adjacent code and keeps the door open for domain leakage.
+**Recommendation**
+Pick one:
 
-You already mostly fixed this with:
+* **Option A (simplest UI):** only use `TimerView` tick events for updating labels; `GameUiModel` includes the initial duration and maybe last-known remaining
+* **Option B (pure snapshot):** remove `TimerView` events and publish only `gameStateUpdated` snapshots on ticks (may be heavier)
 
-startSoloGame(... DifficultyView, WordLengthView, TimerDurationView)
+Given Swing and small UI: Option A is fine; just avoid mixing both pathways in the same screen.
 
-startMultiplayerGame(...)
+---
 
-Recommendation:
+## Medium-value recommendations (cleanup, not urgent)
 
-make requestNewGame(GameConfig) package-private (or delete it)
+### 5) Remove unused parameters and tighten signatures
 
-introduce StartGameRequest (in controller.events or controller.api) that uses only view enums / primitives
+`AppController.startGame(GameConfig config, GamePlayer playerOne, GamePlayer playerTwo, ...)` takes `playerOne/playerTwo` but doesn’t use them.
 
-keep GameConfig construction strictly inside controller/service layer
+**Recommendation**
+Drop unused params. This reduces “phantom dependencies”.
 
-This makes the “UI contract” enforceable by the compiler.
+---
 
-3) Unify timer rendering: prefer model snapshot for “initial”, timer event for “ticks”
+### 6) DTO-ize the remaining “service screens” (only if they start to hurt)
 
-In BaseGamePanel you currently:
+Your gameplay panels are DTO-only; some non-game flows still accept model types via the controller surface (e.g., `addGameLogEntry(model.GameLogEntry)`).
 
-call updateTimersFromModel(model) on gameStarted / stateUpdated
+Not a correctness issue, but if you want a consistent rule:
 
-call updateTimersFromTimer(timerView) on timerUpdated
+* expose `GameLogEntryView` inputs/outputs only, and map inside controller/service
 
-That’s correct, but make sure every timer label can be derived from:
+---
 
-snapshot: “initial remaining / duration”
+## One thing to *not* do
 
-timer event: “slot + remaining”
+Do **not** let anyone refactor `GameState` into a formal State pattern. Your current state machine is already testable and constrained; that refactor is high-risk for near-zero payoff.
 
-If any panel is still peeking elsewhere, delete that path.
+---
 
-4) Reduce UI’s need to “interpret” difficulty rules
+## If you want a single next task that pays off immediately
 
-KeyboardPanel.getButtonColor(...) hard-codes display semantics that depend on difficulty (“present is green in hard” etc.). That’s presentation logic, so it’s not wrong, but it’s also a policy decision.
+**Fix the winner-knowledge prompt flow** (#1). It’s the only item above that can plausibly bite you as a real bug under timing/event ordering, and it’s a small change.
 
-If you want rendering to be totally dumb:
-
-push a KeyboardColorView (or a derived per-key “display state”) into the DTO
-
-or add a LetterFeedbackDisplayView enum that already accounts for difficulty
-
-Otherwise, keep it as-is, but understand you’ve embedded game UI policy in Swing code.
-
-5) Tighten some small hygiene items
-
-GameSessionService imports model.enums.GameMode but doesn’t use it.
-
-GameSessionService imports controller.KeyboardViewBuilder explicitly though it’s same package (harmless, but noisy).
-
-BaseGamePanel.mapDifficulty(...) just null-coalesces; you can inline it and remove the method.
-
-None of these are existential; they just reduce visual noise.
-
-Priority order I’d execute
-
-Fix GameEvent nullability (sealed events or split callbacks)
-
-DTO-only AppController public API (remove/privatize GameConfig exposure)
-
-Optional: push difficulty-dependent keyboard display policy into DTO (if you want a “dumb terminal” UI)
-
-Hygiene pass (unused imports, tiny redundancies)
+If you tell me whether you want the prompt-handling to be driven by a dedicated event kind (recommended) or just by `status` in the snapshot, I’ll give you a precise, file-by-file edit plan.

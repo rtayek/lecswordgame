@@ -3,7 +3,6 @@ package view;
 import controller.AppController;
 import controller.GameOutcomePresenter;
 import controller.api.Navigation;
-import controller.events.GameEvent;
 import controller.events.GameEventListener;
 import controller.events.GameUiModel;
 import java.awt.BorderLayout;
@@ -91,15 +90,18 @@ abstract class BaseGamePanel extends JPanel implements GameEventListener {
     }
     
     @Override
-    public void onGameEvent(GameEvent event) {
-        switch (event.kind()) {
-            case gameStarted -> onGameStarted(event.view());
-            case gameStateUpdated -> onGameStateUpdated(event.view());
-            case timerUpdated -> updateTimersFromTimer(event.timer());
-            case gameFinished -> onGameFinished(event.view());
-            default -> {
-            }
+    public void onGameStateEvent(controller.events.GameEventKind kind, GameUiModel view) {
+        switch (kind) {
+            case gameStarted -> onGameStarted(view);
+            case gameStateUpdated -> onGameStateUpdated(view);
+            case gameFinished -> onGameFinished(view);
+            default -> { }
         }
+    }
+
+    @Override
+    public void onTimerEvent(controller.events.TimerView timer) {
+        updateTimersFromTimer(timer);
     }
     
     protected void onGameStarted(GameUiModel model) {
