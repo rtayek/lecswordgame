@@ -4,7 +4,7 @@ get response from chat .
 add response or append to chatmd. (remember status and recommendations).
 git add,commit (save the all the .mds). (what we did and what we are going to do).
 clear content of chat.md (don't let it repeat).
-delete contents of codex.md  (remove what happend lat time. sigal nothing hapened yet).
+clear contents of codex.md  (remove what happend lat time. sigal nothing hapened yet).
 git add, commit, and push.
 
 give prompt to codex
