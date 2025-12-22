@@ -137,7 +137,7 @@ public class GameSessionService implements TurnTimer.Listener {
     @Override
     public void onTimeUpdated(PlayerSlot slot, int remainingSeconds) {
         if (currentGameState == null || slot == null) return;
-        publish(GameEventKind.timerUpdated);
+        publishTimer(slot, remainingSeconds);
     }
 
     @Override
@@ -154,12 +154,13 @@ public class GameSessionService implements TurnTimer.Listener {
         GamePlayer player = playerForSlot(slot);
         currentGameState.handleTimeout(player);
         turnTimer.stop();
+        publishTimer(slot, 0);
         publish(GameEventKind.timerExpired);
         publish(GameEventKind.gameFinished);
     }
 
     private void publish(GameEventKind kind) {
-        var event = new GameEvent(kind, uiMapper.toUiModel(currentGameState));
+        var event = new GameEvent(kind, uiMapper.toUiModel(currentGameState), null);
         for (GameEventListener l : eventListeners) {
             l.onGameEvent(event);
         }
@@ -182,5 +183,13 @@ public class GameSessionService implements TurnTimer.Listener {
             case playerOne -> currentGameState.getConfig().playerOne();
             case playerTwo -> currentGameState.getConfig().playerTwo();
         };
+    }
+
+    private void publishTimer(PlayerSlot slot, int remainingSeconds) {
+        var timerView = new controller.events.TimerView(slot, remainingSeconds);
+        var event = new GameEvent(GameEventKind.timerUpdated, null, timerView);
+        for (GameEventListener l : eventListeners) {
+            l.onGameEvent(event);
+        }
     }
 }

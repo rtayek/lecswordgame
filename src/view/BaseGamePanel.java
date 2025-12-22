@@ -95,7 +95,7 @@ abstract class BaseGamePanel extends JPanel implements GameEventListener {
         switch (event.kind()) {
             case gameStarted -> onGameStarted(event.view());
             case gameStateUpdated -> onGameStateUpdated(event.view());
-            case timerUpdated -> onGameStateUpdated(event.view());
+            case timerUpdated -> updateTimersFromTimer(event.timer());
             case gameFinished -> onGameFinished(event.view());
             default -> {
             }
@@ -138,6 +138,8 @@ abstract class BaseGamePanel extends JPanel implements GameEventListener {
     abstract void addGuessRow(controller.events.GuessView guessView, controller.events.DifficultyView difficulty);
 
     abstract void updateTimersFromModel(GameUiModel model);
+
+    abstract void updateTimersFromTimer(controller.events.TimerView timerView);
 
     abstract void updateCurrentPlayerLabelFromModel();
 }

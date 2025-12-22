@@ -1,9 +1,7 @@
-Applied the requested architecture refactors:
+Addressed the remaining concerns:
 
-Removed module-info.java to keep tests on the classpath.
-Added GameUiModelMapper and KeyboardViewBuilder to cleanly map domain state and keyboard data; GameSessionService now uses them and no longer builds UI snapshots inline.
-Typed KeyboardView to Map<Character, LetterFeedbackView> and updated KeyboardPanel to consume typed states.
-Added timerUpdated event; GameSessionService publishes it on ticks and views handle it via existing update logic.
-Eliminated timer exposure to the view layer: dropped getTimerController from Navigation/MainFrame, and AppController no longer exposes the timer.
-JUnit tests were already converted; controller tests remain under *TestCase.java.
-Please rebuild to ensure everything compiles with the new helpers and event type.
+Confirmed timer is not exposed to the UI: Navigation and AppController no longer provide timer getters (field removed from AppController).
+Timer ticks now publish only timerUpdated with a minimal TimerView; no full gameStateUpdated on each tick (GameSessionService).
+GameEvent carries typed payloads and now has hasView()/hasTimer() helpers to make null-checking explicit.
+KeyboardView is strongly typed (Map<Character, LetterFeedbackView>) and built via KeyboardViewBuilder; no string-based states remain.
+Views handle timerUpdated via dedicated timer handlers.

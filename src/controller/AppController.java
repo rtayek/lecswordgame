@@ -29,12 +29,10 @@ public class AppController {
     private final WordSelectionFlow wordSelectionFlow = new WordSelectionFlow();
     private final ProfileService profileService;
     private final NavigationCoordinator navigationCoordinator = new NavigationCoordinator();
-    private final TurnTimer turnTimer;
 
     public AppController(PersistenceService persistenceService, GameController gameController, TurnTimer turnTimer) {
         this.gameSessionService = new GameSessionService(gameController, turnTimer);
         this.profileService = new ProfileService(persistenceService);
-        this.turnTimer = turnTimer;
     }
     
     public void addGameEventListener(GameEventListener listener) {

@@ -111,4 +111,14 @@ class SoloGamePanel extends BaseGamePanel {
             setStatus((model.playerOne() == null ? "Player" : model.playerOne()) + " ran out of time!");
         }
     }
+
+    @Override
+    void updateTimersFromTimer(controller.events.TimerView timerView) {
+        if (timerView == null || timerView.slot() != controller.events.PlayerSlot.playerOne) return;
+        updateTimerLabel(playerTimerLabel, timerView.remainingSeconds());
+        if (timerView.remainingSeconds() <= 0 && lastModel != null) {
+            var name = lastModel.playerOne() == null ? "Player" : lastModel.playerOne();
+            setStatus(name + " ran out of time!");
+        }
+    }
 }

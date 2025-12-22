@@ -187,4 +187,27 @@ class MultiplayerGamePanel extends BaseGamePanel {
             setStatus(name + " ran out of time!");
         }
     }
+
+    @Override
+    void updateTimersFromTimer(controller.events.TimerView timerView) {
+        if (timerView == null) return;
+        int remaining = timerView.remainingSeconds();
+        switch (timerView.slot()) {
+            case playerOne -> {
+                updateTimerLabel(playerOneTimerLabel, remaining);
+                if (remaining <= 0 && lastModel != null) {
+                    String name = lastModel.playerOne() == null ? "Player" : lastModel.playerOne();
+                    setStatus(name + " ran out of time!");
+                }
+            }
+            case playerTwo -> {
+                updateTimerLabel(playerTwoTimerLabel, remaining);
+                if (remaining <= 0 && lastModel != null) {
+                    String name = lastModel.playerTwo() == null ? "Player" : lastModel.playerTwo();
+                    setStatus(name + " ran out of time!");
+                }
+            }
+            default -> { }
+        }
+    }
 }
