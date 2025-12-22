@@ -1,152 +1,72 @@
-Okay. Let’s **break the loop cleanly** and pin down **one true “you are here”**, then a **short, finite refactor list**. No more re-litigating DTOs.
+Yep — I unpacked the tar and did an architecture-focused pass.
 
-I examined the **current tar** you just uploaded. Here is the **accurate state** and what (if anything) is worth refactoring.
+## What you’ve already refactored (and it’s the right direction)
 
----
+### 1) You *did* the “remove `Path` from the public API” refactor
 
-## Where you ACTUALLY are (now, for real)
+`CoreFacade` now exposes:
 
-### ✅ Core game UI architecture is DONE
+* `List<SavedDocDto> listSavedDocs()`
+* `DocumentDto loadSavedDoc(String id)`
 
-These are no longer debatable:
+…and `SavedDocDto` is a clean record (`id/title/url/fetchedAt`). This is the single biggest “future remote client” enabler.
 
-* **Views do not read `GameState`**
-* **Guess input is intent-only**
-* **Rendering is snapshot-driven (`GameUiModel`)**
-* **No `GuessOutcome` / domain objects in guess rendering**
-* **Typed view enums exist (`GameStatusView`, `DifficultyView`)**
-* **No `metadata Object` escape hatch in `GameEvent`**
+### 2) Ingest now returns a real outcome type
 
-This means: **DTO-only for gameplay UI is complete.**
-Gemini is correct *on that specific claim*.
+`IngestOutcome` is a sealed interface with explicit variants:
 
-So stop touching:
+* `SavedIndexed(doc, chunkCount)`
+* `JsShell(doc, reason)`
+* `RejectedNonHtml(contentType)`
+* `HttpError(statusCode, snippet)`
+* `FetchError(message)`
 
-* `BaseGamePanel`
-* guess rendering
-* keyboard rendering
-* submitGuess flow
+That’s exactly the kind of “don’t make the UI parse strings / infer null” boundary you want.
 
-They are finished.
+### 3) Fetcher is no longer doing dumb per-call client creation
 
----
+`Fetcher` holds a configured `HttpClient` as a field. Good.
 
-## The REAL remaining architectural leak (singular)
+## What’s still worth tweaking (small, but real)
 
-There is **exactly one remaining model→view coupling** that matters:
+### A) Remove `CoreFacade.looksLikeJsShell(...)`
 
-### 🔴 `TurnTimer` leaks `model.GamePlayer` into the view layer
-
-In this tar:
-
-* `TurnTimer.Listener` uses `model.GamePlayer`
-* Swing panels implement that listener
-* This pulls **domain identity into the UI**
-
-This is why it *felt* like DTO-only was never finished — because **timers violate the rule**, not guesses.
-
-This is not cosmetic. This is the *actual* remaining architectural debt.
-
----
-
-## Recommended refactorings (short, finite, justified)
-
-### 1️⃣ Replace `model.GamePlayer` in timers with a controller-level identifier
-
-Create a controller/view-facing enum:
+`CoreFacade` has this package-private method:
 
 ```java
-enum PlayerSlot {
-    playerOne,
-    playerTwo
-}
+boolean looksLikeJsShell(String plainText) { ... }
 ```
 
-Then refactor:
+Now that `ingestUrl()` can return `IngestOutcome.JsShell`, you don’t need a separate “peek inside internals” method on the facade at all.
 
-**Before**
+**Recommendation:** delete it (or move it fully internal).
+It’s a “test helper leak” and it’ll nag you later when you add more clients.
 
-```java
-void onTimeUpdated(GamePlayer player, int seconds);
-```
+### B) Make `FetchError` carry more signal (optional)
 
-**After**
+Right now it’s just `FetchError(String message)`.
 
-```java
-void onTimeUpdated(PlayerSlot slot, int seconds);
-```
+Consider one of:
 
-Mapping `GamePlayer → PlayerSlot` happens **once** in the controller.
+* `FetchError(String message, String exceptionClass)` (minimal)
+* or include a short “kind” enum (dns/ssl/timeout/etc.) if you find UI wants nicer messages
 
-📌 This removes the last model import from views.
+Don’t over-engineer it; just stop losing the cause type entirely.
+
+## Packaging hygiene note
+
+This tar still includes a top-level `./.gradle` directory (Gradle cache). It’s not a code architecture issue, but it’s still junk-in-archive.
+
+If you want it gone for good, you already know the fix: exclude **both** the directory and its contents.
 
 ---
 
-### 2️⃣ Stop panels from listening to timers directly (recommended)
+## Bottom line
 
-Right now:
+No “major” refactorings left that are mandatory. You’ve already knocked out the big ones (API boundary + outcome typing). The remaining improvements are cleanup/polish:
 
-* Panels listen to `TurnTimer`
-* Controller also listens (but mostly ignores ticks)
+1. kill `CoreFacade.looksLikeJsShell`
+2. optionally enrich `FetchError`
+3. stop shipping `.gradle/` in tars
 
-This breaks your event/snapshot model.
-
-**Better**
-
-* `GameSessionService` listens to timer
-* Timer updates are folded into `GameUiModel`
-* Controller emits `gameStateUpdated`
-* View renders timer from snapshot
-
-This makes timers obey the same rule as guesses:
-
-> intents in, snapshots out
-
----
-
-### 3️⃣ Make `KeyboardView` fully typed (small cleanup)
-
-If you still have:
-
-```java
-Map<Character, String>
-```
-
-Change to:
-
-```java
-Map<Character, LetterFeedbackView>
-```
-
-This eliminates string comparison logic and is a cheap correctness win.
-
----
-
-## What you should NOT refactor (explicitly)
-
-Do **not**:
-
-* introduce State pattern
-* rework `GameState`
-* split `GameSessionService` further
-* re-touch DTO/guess flow
-* re-argue about “DTO-only”
-
-Those are finished.
-
----
-
-## One-sentence “you are here”
-
-> The game UI architecture is correct; the only remaining coupling is timer callbacks leaking `GamePlayer` into views.
-
-Fix **that one thing**, and the architecture discussion is over.
-
----
-
-If you want, next I can:
-
-* give a **file-by-file patch plan** for the timer refactor (very mechanical), or
-* help you **declare architecture frozen** and move on to gameplay / UX features
-
-Your call — but the loop is now definitively identified and stoppable.
+If you tell me “remote player next”, the next architectural step is designing the wire protocol around `SavedDocDto`, `DocumentDto`, `AnswerDto`, and `IngestOutcome`—you’re basically already set up for it.

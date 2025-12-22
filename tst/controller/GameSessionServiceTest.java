@@ -2,7 +2,6 @@ package controller;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import model.GamePlayer;
 import model.GameState;
 import model.PlayerProfile;
 import model.WordChoice;
@@ -13,6 +12,7 @@ import model.enums.GameStatus;
 import model.enums.TimerDuration;
 import model.enums.WordLength;
 import model.enums.WordSource;
+import controller.events.PlayerSlot;
 
 /**
  * Lightweight self-checks without JUnit dependency.
@@ -26,8 +26,8 @@ public final class GameSessionServiceTest {
     }
 
     private static void firstCorrectGuessInMultiplayerTriggersKnowledge() {
-        var p1 = new GamePlayer(new PlayerProfile("P1", ""), true);
-        var p2 = new GamePlayer(new PlayerProfile("P2", ""), true);
+        var p1 = new model.GamePlayer(new PlayerProfile("P1", ""), true);
+        var p2 = new model.GamePlayer(new PlayerProfile("P2", ""), true);
         var cfg = new GameState.GameConfig(GameMode.multiplayer, Difficulty.normal, WordLength.five, TimerDuration.none, p1, p2);
         var session = new GameSessionService(new GameController(new DictionaryService()), new NoopTimer());
         var state = session.startNewGame(cfg, new WordChoice("APPLE", WordSource.manual), new WordChoice("GRAPE", WordSource.manual));
@@ -53,13 +53,13 @@ public final class GameSessionServiceTest {
                 stopped.set(true);
             }
         };
-        var p1 = new GamePlayer(new PlayerProfile("P1", ""), true);
-        var p2 = new GamePlayer(new PlayerProfile("P2", ""), true);
+        var p1 = new model.GamePlayer(new PlayerProfile("P1", ""), true);
+        var p2 = new model.GamePlayer(new PlayerProfile("P2", ""), true);
         var cfg = new GameState.GameConfig(GameMode.multiplayer, Difficulty.normal, WordLength.five, TimerDuration.oneMinute, p1, p2);
         var session = new GameSessionService(new GameController(new DictionaryService()), timer);
         var state = session.startNewGame(cfg, new WordChoice("APPLE", WordSource.manual), new WordChoice("GRAPE", WordSource.manual));
 
-        session.onTimeExpired(p1);
+        session.onTimeExpired(PlayerSlot.playerOne);
 
         if (state.getStatus() != GameStatus.finished) {
             throw new AssertionError("Timeout should finish the game");
@@ -78,9 +78,9 @@ public final class GameSessionServiceTest {
     private static class NoopTimer implements TurnTimer {
         @Override public void addListener(Listener listener) { }
         @Override public void removeListener(Listener listener) { }
-        @Override public void setTimeForPlayer(GamePlayer player, int seconds) { }
-        @Override public int getRemainingFor(GamePlayer player) { return 0; }
-        @Override public void start(GamePlayer player) { }
+        @Override public void setTimeForPlayer(PlayerSlot slot, int seconds) { }
+        @Override public int getRemainingFor(PlayerSlot slot) { return 0; }
+        @Override public void start(PlayerSlot slot) { }
         @Override public void stop() { }
         @Override public void reset() { }
     }
