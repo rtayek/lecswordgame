@@ -10,6 +10,7 @@ import model.WordChoice;
 import model.enums.GameMode;
 import model.enums.GameStatus;
 import model.enums.WordLength;
+import controller.events.PlayerSlot;
 import controller.TurnTimer;
 import controller.events.GameEvent;
 import controller.events.GameEvent.GameEventKind;
@@ -51,12 +52,15 @@ public class GameSessionService implements TurnTimer.Listener {
             turnTimer.reset();
             int gameTime = config.timerDuration().seconds();
             if (config.playerOne() != null) {
-                turnTimer.setTimeForPlayer(config.playerOne(), gameTime);
+                turnTimer.setTimeForPlayer(PlayerSlot.playerOne, gameTime);
             }
             if (config.playerTwo() != null) {
-                turnTimer.setTimeForPlayer(config.playerTwo(), gameTime);
+                turnTimer.setTimeForPlayer(PlayerSlot.playerTwo, gameTime);
             }
-            turnTimer.start(currentGameState.getCurrentTurn());
+            var slot = slotFor(currentGameState.getCurrentTurn());
+            if (slot != null) {
+                turnTimer.start(slot);
+            }
         } else {
             turnTimer.reset();
         }
@@ -86,7 +90,10 @@ public class GameSessionService implements TurnTimer.Listener {
             turnTimer.stop();
             publish(GameEventKind.gameFinished);
         } else if (currentGameState.getConfig().timerDuration().isTimed() && nextTurn != null && nextTurn != player) {
-            turnTimer.start(nextTurn);
+            var slot = slotFor(nextTurn);
+            if (slot != null) {
+                turnTimer.start(slot);
+            }
         }
     }
 
@@ -159,10 +166,10 @@ public class GameSessionService implements TurnTimer.Listener {
         String winnerName = state.getWinner() == null ? null : name(state.getWinner());
         String provisional = state.getProvisionalWinner() == null ? null : name(state.getProvisionalWinner());
         Integer p1Remaining = turnTimer != null && state.getConfig().playerOne() != null
-                ? turnTimer.getRemainingFor(state.getConfig().playerOne())
+                ? turnTimer.getRemainingFor(PlayerSlot.playerOne)
                 : null;
         Integer p2Remaining = turnTimer != null && state.getConfig().playerTwo() != null
-                ? turnTimer.getRemainingFor(state.getConfig().playerTwo())
+                ? turnTimer.getRemainingFor(PlayerSlot.playerTwo)
                 : null;
         int timerSeconds = state.getConfig().timerDuration() != null ? state.getConfig().timerDuration().seconds() : 0;
         var guesses = state.getGuesses().stream()

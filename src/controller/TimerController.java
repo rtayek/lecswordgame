@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import javax.swing.Timer;
-import model.GamePlayer;
+import controller.events.PlayerSlot;
 
 /**
  * Swing-backed implementation of TurnTimer.
@@ -16,8 +16,8 @@ public class TimerController implements TurnTimer {
 
 	public TimerController() {
 		ActionListener timerListener = e -> {
-			if (activePlayer != null) {
-				tick(activePlayer);
+			if (activeSlot != null) {
+				tick(activeSlot);
 			}
 		};
 		swingTimer = new Timer(1000, timerListener);
@@ -38,26 +38,28 @@ public class TimerController implements TurnTimer {
 	}
 
 	@Override
-	public void setTimeForPlayer(GamePlayer player,int seconds) {
-		remainingSeconds.put(player,seconds);
-		notifyUpdate(player);
+	public void setTimeForPlayer(PlayerSlot slot,int seconds) {
+		if (slot == null) return;
+		remainingSeconds.put(slot,seconds);
+		notifyUpdate(slot);
 	}
 
 	@Override
-	public int getRemainingFor(GamePlayer player) {
-		return remainingSeconds.getOrDefault(player,0);
+	public int getRemainingFor(PlayerSlot slot) {
+		if (slot == null) return 0;
+		return remainingSeconds.getOrDefault(slot,0);
 	}
 
 	@Override
-	public void start(GamePlayer player) {
-		this.activePlayer = player;
+	public void start(PlayerSlot slot) {
+		this.activeSlot = slot;
 		swingTimer.start();
 	}
 
 	@Override
 	public void stop() {
 		swingTimer.stop();
-		this.activePlayer = null;
+		this.activeSlot = null;
 	}
 
 	@Override
@@ -66,34 +68,34 @@ public class TimerController implements TurnTimer {
 		remainingSeconds.clear();
 	}
 
-	private void tick(GamePlayer player) {
-		Objects.requireNonNull(player,"player");
-		var current=getRemainingFor(player);
+	private void tick(PlayerSlot slot) {
+		Objects.requireNonNull(slot,"slot");
+		var current=getRemainingFor(slot);
 		if(current<=0) { return; }
 		var updated=current-1;
-		remainingSeconds.put(player,updated);
+		remainingSeconds.put(slot,updated);
 		if(updated<=0) {
 			swingTimer.stop();
-			notifyExpired(player);
+			notifyExpired(slot);
 		} else {
-			notifyUpdate(player);
+			notifyUpdate(slot);
 		}
 	}
 
-	private void notifyUpdate(GamePlayer player) {
+	private void notifyUpdate(PlayerSlot slot) {
 		for (Listener l : listeners) {
-			l.onTimeUpdated(player,getRemainingFor(player));
+			l.onTimeUpdated(slot,getRemainingFor(slot));
 		}
 	}
 
-	private void notifyExpired(GamePlayer player) {
+	private void notifyExpired(PlayerSlot slot) {
 		for (Listener l : listeners) {
-			l.onTimeExpired(player);
+			l.onTimeExpired(slot);
 		}
 	}
 
 	private final Timer swingTimer;
-	private final Map<GamePlayer,Integer> remainingSeconds=new HashMap<>();
+	private final Map<PlayerSlot,Integer> remainingSeconds=new HashMap<>();
 	private final Set<Listener> listeners=new HashSet<>();
-	private GamePlayer activePlayer;
+	private PlayerSlot activeSlot;
 }

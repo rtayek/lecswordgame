@@ -1,4 +1,5 @@
 give tar to chat and ask it to analyze and recommend.
-get response from chat and put into response.txt (has summary and new prompt).
+get response from chat and put into chats/name.md
 git add and and commit.
-give prompt from response to codex.
+give prompt from 
+put response from codex into chats/codex.md 

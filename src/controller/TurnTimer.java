@@ -1,23 +1,23 @@
 package controller;
 
-import model.GamePlayer;
+import controller.events.PlayerSlot;
 
 /**
  * Domain-facing timer abstraction for per-turn countdowns.
  */
 public interface TurnTimer {
     interface Listener {
-        void onTimeUpdated(GamePlayer player, int remainingSeconds);
-        void onTimeExpired(GamePlayer player);
+        void onTimeUpdated(PlayerSlot slot, int remainingSeconds);
+        void onTimeExpired(PlayerSlot slot);
     }
 
     void addListener(Listener listener);
     void removeListener(Listener listener);
 
-    void setTimeForPlayer(GamePlayer player, int seconds);
-    int getRemainingFor(GamePlayer player);
+    void setTimeForPlayer(PlayerSlot slot, int seconds);
+    int getRemainingFor(PlayerSlot slot);
 
-    void start(GamePlayer player);
+    void start(PlayerSlot slot);
     void stop();
     void reset();
 }
