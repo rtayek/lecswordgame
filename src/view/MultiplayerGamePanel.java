@@ -88,10 +88,7 @@ class MultiplayerGamePanel extends BaseGamePanel {
         super.onGameStarted(model);
         leftGrid.clearRows();
         rightGrid.clearRows();
-        if (lastModel != null) {
-            updateTimerLabel(playerOneTimerLabel, lastModel.timerDurationSeconds());
-            updateTimerLabel(playerTwoTimerLabel, lastModel.timerDurationSeconds());
-        }
+        updateTimersFromModel(model);
     }
 
     @Override
@@ -141,6 +138,14 @@ class MultiplayerGamePanel extends BaseGamePanel {
             return;
         }
 
+        if (lastModel.status() == controller.events.GameStatusView.awaitingWinnerKnowledge) {
+            currentPlayerLabel.setText("Awaiting winner knowledge...");
+            submitButton.setEnabled(false);
+            guessField.setEnabled(false);
+            keyboardPanel.setEnabled(false);
+            return;
+        }
+
         if (lastModel.status() == controller.events.GameStatusView.finished) {
             var winnerName = lastModel.winner();
             if (winnerName == null) {
@@ -171,6 +176,13 @@ class MultiplayerGamePanel extends BaseGamePanel {
         Integer p1 = model.playerOneRemaining();
         Integer p2 = model.playerTwoRemaining();
         int defaultSeconds = model.timerDurationSeconds();
+        if (defaultSeconds == 0 && p1 == null && p2 == null) {
+            playerOneTimerLabel.setText("");
+            playerTwoTimerLabel.setText("");
+            playerOneTimerLabel.setForeground(Color.BLACK);
+            playerTwoTimerLabel.setForeground(Color.BLACK);
+            return;
+        }
         updateTimerLabel(playerOneTimerLabel, p1 != null ? p1 : defaultSeconds);
         updateTimerLabel(playerTwoTimerLabel, p2 != null ? p2 : defaultSeconds);
         if (p1 != null && p1 <= 0) {

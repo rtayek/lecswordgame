@@ -87,17 +87,30 @@ abstract class BaseGamePanel extends JPanel implements GameEventListener {
 
     @Override
     public void onGameStateEvent(controller.events.GameEventKind kind, GameUiModel view) {
-        switch (kind) {
-            case gameStarted -> onGameStarted(view);
-            case gameStateUpdated -> onGameStateUpdated(view);
-            case gameFinished -> onGameFinished(view);
-            default -> { }
+        Runnable r = () -> {
+            switch (kind) {
+                case gameStarted -> onGameStarted(view);
+                case gameStateUpdated -> onGameStateUpdated(view);
+                case gameFinished -> onGameFinished(view);
+                case timerExpired -> onGameStateUpdated(view);
+                default -> { }
+            }
+        };
+        if (javax.swing.SwingUtilities.isEventDispatchThread()) {
+            r.run();
+        } else {
+            javax.swing.SwingUtilities.invokeLater(r);
         }
     }
 
     @Override
     public void onTimerEvent(controller.events.TimerView timer) {
-        updateTimersFromTimer(timer);
+        Runnable r = () -> updateTimersFromTimer(timer);
+        if (javax.swing.SwingUtilities.isEventDispatchThread()) {
+            r.run();
+        } else {
+            javax.swing.SwingUtilities.invokeLater(r);
+        }
     }
     
     protected void onGameStarted(GameUiModel model) {

@@ -57,9 +57,7 @@ class SoloGamePanel extends BaseGamePanel {
         super.onGameStarted(model);
         grid.clearRows();
         setStatus("New game started. Make your guess!");
-        if (lastModel != null) {
-            updateTimerLabel(playerTimerLabel, lastModel.timerDurationSeconds());
-        }
+        updateTimersFromModel(model);
     }
 
     @Override
@@ -73,7 +71,6 @@ class SoloGamePanel extends BaseGamePanel {
             return;
         }
 
-        var toShow = vm;
         if (vm.nextAction() == NextAction.ASK_WINNER_KNOWLEDGE) {
             int choice = JOptionPane.showConfirmDialog(this, vm.message(), vm.title(), JOptionPane.YES_NO_OPTION);
             boolean finalKnew = (choice == JOptionPane.YES_OPTION);
@@ -81,11 +78,7 @@ class SoloGamePanel extends BaseGamePanel {
             return; // new event will render final outcome
         }
 
-        if (toShow == null) {
-            return;
-        }
-
-        OutcomeRenderer.render(this, toShow);
+        OutcomeRenderer.render(this, vm);
 
         navigation.showGameSetup(); // Or showLanding()
     }
@@ -104,6 +97,11 @@ class SoloGamePanel extends BaseGamePanel {
     void updateTimersFromModel(GameUiModel model) {
         if (model == null) return;
         Integer remaining = model.playerOneRemaining();
+        if (remaining == null && model.timerDurationSeconds() == 0) {
+            playerTimerLabel.setText("");
+            playerTimerLabel.setForeground(Color.BLACK);
+            return;
+        }
         int value = remaining != null ? remaining : model.timerDurationSeconds();
         updateTimerLabel(playerTimerLabel, value);
         if (remaining != null && remaining <= 0) {

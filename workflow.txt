@@ -23,7 +23,7 @@ unnknown state
 	------------------------
 	put response from codex into chats/codex.md (remember codex status and recommendations for this time).
 	fix any erroes and append new codex responses to codex.md
-	check in with commit message step B
+	check in with commit message step B - make script for this?
 	clear codex.md
 	all .md files are empty.
 	ready for chat
