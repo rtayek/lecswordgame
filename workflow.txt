@@ -9,6 +9,7 @@ unnknown state
 	get response from chat.
 	add response or append to chat.md. (remember status and recommendations).
 	/// is ithis top of loop?
+	run checkinchats.sh
 	git add,commit (save the all the .mds and any other changes). (save what we did and what we are going to do).
 	state A
 	clear contents of codex.md  (remove what happend lat time. sigal nothing hapened yet).
