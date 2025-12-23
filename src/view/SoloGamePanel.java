@@ -113,6 +113,7 @@ class SoloGamePanel extends BaseGamePanel {
     @Override
     void updateTimersFromTimer(controller.events.TimerView timerView) {
         if (timerView == null || timerView.slot() != controller.events.PlayerSlot.playerOne) return;
+        if (lastModel != null && lastModel.timerDurationSeconds() == 0) return; // untimed
         updateTimerLabel(playerTimerLabel, timerView.remainingSeconds());
         if (timerView.remainingSeconds() <= 0 && lastModel != null) {
             var name = lastModel.playerOne() == null ? "Player" : lastModel.playerOne();

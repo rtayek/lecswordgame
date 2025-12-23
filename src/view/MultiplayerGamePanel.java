@@ -197,6 +197,7 @@ class MultiplayerGamePanel extends BaseGamePanel {
     @Override
     void updateTimersFromTimer(controller.events.TimerView timerView) {
         if (timerView == null) return;
+        if (lastModel != null && lastModel.timerDurationSeconds() == 0) return; // untimed; ignore ticks
         int remaining = timerView.remainingSeconds();
         switch (timerView.slot()) {
             case playerOne -> {

@@ -11,7 +11,6 @@ import controller.events.TimerDurationView;
 import controller.events.WordSourceView;
 import controller.events.DifficultyView;
 import java.util.List;
-import java.util.stream.Collectors;
 import model.GamePlayer;
 import model.GameState.GameConfig;
 import model.PlayerProfile;

@@ -92,10 +92,9 @@ abstract class BaseGamePanel extends JPanel implements GameEventListener {
                 case gameStarted -> onGameStarted(view);
                 case gameStateUpdated -> onGameStateUpdated(view);
                 case gameFinished -> onGameFinished(view);
-                case timerExpired -> { /* handled by finish event */ }
-                default -> { }
-            }
-        };
+            default -> { }
+        }
+    };
         if (javax.swing.SwingUtilities.isEventDispatchThread()) {
             r.run();
         } else {
