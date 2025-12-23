@@ -1,68 +1,98 @@
-I unpacked the **current tar** and validated the “evil twin” claims against the actual code. Net: the refactor is mostly *good and coherent*, and you are no longer fighting DTO boundaries. The remaining work is now small, correctness-oriented, and (importantly) finite.
+I unpacked and reviewed the **fresh tar**. Overall: this is a solid “tightened” iteration. The core architectural loop (intent in, snapshots/events out, no domain leaking into views) is now genuinely closed.
 
-## What’s confirmed as done and correct
+## What’s clearly improved and should be treated as frozen
 
-* **Split listener callbacks**: `GameEventListener` is now two methods:
-  `onGameStateEvent(GameEventKind, GameUiModel)` and `onTimerEvent(TimerView)`.
-  No nullable unions / metadata backdoors.
-* **Timer identity leak is fixed**: `TurnTimer.Listener` uses `PlayerSlot`, not `model.GamePlayer`.
-* **Winner-knowledge flow is now event-correct**: Multiplayer and Solo prompt → `reportWinnerKnowledge()` → **return**, waiting for the next event to render outcome (no stale snapshot reuse).
-* **Keyboard is strongly typed**: `KeyboardView` carries `LetterFeedbackView`, and `KeyboardPanel` uses typed feedback.
-* **Untimed snapshots are fixed**: `GameUiModelMapper` only fills `playerOneRemaining/playerTwoRemaining` when `timerDuration.isTimed()`.
+* **No `model.*` imports in `src/view`** (DTO/snapshot boundary holds).
+* **Listener API is clean**: `GameEventListener` is split into:
 
-These are the right tightenings.
+  * `onGameStateEvent(GameEventKind, GameUiModel)`
+  * `onTimerEvent(TimerView)`
+* **Winner-knowledge flow is correct**: prompt → `reportWinnerKnowledge(...)` → **return**, wait for next event.
+* **Timer identity leak is gone**: timers use `PlayerSlot` end-to-end.
+* **Untimed games no longer show “00:00”** (Multiplayer/Solo now blank timers when duration is none).
+* **Keyboard styling fixed**: unused letters are black on default background; used letters are colored with white text.
 
-## The top recommendations from this tar
+These are exactly the right “tightenings.”
 
-### 1) Fix Swing threading for events and timer ticks (high risk if ignored)
+---
 
-`GameSessionService` calls listeners directly from whatever thread the timer uses. `BaseGamePanel` updates Swing components directly in `onGameStateEvent` and `onTimerEvent`.
+## Recommendations that are still worth doing
 
-**Recommendation:** Guarantee EDT delivery. Pick one approach:
+### 1) SoloGamePanel: disable `submitButton` when finished
 
-* Wrap calls in the view: in `BaseGamePanel.onGameStateEvent` and `onTimerEvent`, do `SwingUtilities.invokeLater(...)` before touching Swing; or
-* Wrap publishing in `GameSessionService` (publish on EDT).
+In `SoloGamePanel.onGameFinished(...)` you disable `guessField` and `keyboardPanel`, but **not** `submitButton`. Clicking it can still call `handleGuess()` and produce noisy errors.
 
-If you don’t do this, you will eventually get random UI glitches/hangs that look “haunted.”
+**Fix**
+In `onGameFinished` add:
 
-### 2) Disable input during `awaitingWinnerKnowledge` (user-facing bug)
+* `submitButton.setEnabled(false);`
 
-In `MultiplayerGamePanel.updateCurrentPlayerLabelFromModel()`, input is enabled for all non-`finished` statuses. But `GameSessionService.submitGuess()` rejects guesses during `awaitingWinnerKnowledge`.
+(You already do this correctly in Multiplayer via status-based logic.)
 
-**Recommendation:** In `updateCurrentPlayerLabelFromModel()`:
+---
 
-* if status == `awaitingWinnerKnowledge`: disable `submitButton`, `guessField`, `keyboardPanel`.
+### 2) `timerExpired` handling: stop using it as “gameStateUpdated”
 
-This avoids the “click submit → exception text in status bar” UX.
+In `BaseGamePanel.onGameStateEvent(...)`, you currently route:
 
-### 3) Stop showing “00:00” in untimed games (polish + prevents confusion)
+```java
+case timerExpired -> onGameStateUpdated(view);
+```
 
-Even though remaining seconds are `null` when untimed (good), the panels still initialize timer labels to `"00:00"` and update them using `timerDurationSeconds()` (which is 0 for untimed), so untimed games still look timed-but-empty.
+But `GameSessionService` already publishes:
 
-**Recommendation:** In `updateTimersFromModel` (and `onGameStarted`) for Solo/Multiplayer:
+* `publishTimer(slot, 0)`
+* `publishState(timerExpired)`
+* `publishState(gameFinished)`
 
-* If `model.timerDurationSeconds() == 0`: set label to `""` (or `"--:--"`) and keep it black.
+So mapping `timerExpired` to “state updated” is semantically odd and can cause duplicate UI work.
 
-### 4) Either handle `timerExpired` or remove it (clarity)
+**Two clean options**
 
-`GameEventKind.timerExpired` is published, but `BaseGamePanel.onGameStateEvent` ignores it. That’s fine if timer expiration is fully handled by the timer ticks + `gameFinished`, but then the extra kind is misleading.
+* **Option A (minimal):** handle `timerExpired` explicitly as a no-op (or status message only), and let `gameFinished` drive the end dialog.
+* **Option B:** remove the `timerExpired` kind entirely and rely on `publishTimer(...0)` + `gameFinished`.
 
-**Recommendation:** Either:
+I’d do **Option A** now (lowest churn, most clarity).
 
-* Add a case for `timerExpired` (even if it’s a no-op with a comment), or
-* Remove `timerExpired` and rely on the existing flow.
+---
 
-## Small cleanup (optional)
+### 3) Make `addGameLogEntry` DTO-only (small boundary cleanup)
 
-* In `SoloGamePanel.onGameFinished`, `toShow` is redundant; the null check after the `ASK_WINNER_KNOWLEDGE` return is dead code. Clean it up when convenient.
-* `AppController.addGameLogEntry(model.GameLogEntry)` is still model-facing. Not urgent, but if you want a strict “view-only public surface,” convert that to `GameLogEntryView`.
+`AppController.addGameLogEntry(model.GameLogEntry entry)` still exposes a domain type on the public surface. It’s not dangerous, but it’s inconsistent with your “view talks DTOs” rule.
 
-## Bottom line
+**Fix**
 
-The refactor **improved the architecture** and did not introduce new boundary debt. Your next “best” changes are:
+* Change signature to `addGameLogEntry(GameLogEntryView entry)`
+* Map inside AppController/ProfileService
 
-1. **EDT safety** for event/timer callbacks
-2. **Disable input** while awaiting winner knowledge
-3. **Hide 00:00** for untimed games
+Do this only if you expect to expand logs/friends/screens; otherwise it’s optional.
 
-If you want one concrete next commit: do **(1)** first. It’s the only item that can cause intermittent, hard-to-debug failures later.
+---
+
+### 4) Timer + snapshot: keep the ownership rule explicit
+
+Right now you have both:
+
+* initial timer display from `GameUiModel` (good)
+* tick updates from `TimerView` (good)
+
+That’s fine. Just keep one rule:
+
+> After first paint, **only TimerView ticks** should update timer labels.
+
+Avoid also rewriting timer labels in response to every `gameStateUpdated`, or you’ll eventually see flicker/stale overwrites.
+
+(Your panels are already close to this; this is mostly a “don’t regress” warning.)
+
+---
+
+## One-liner next commit suggestion
+
+If you want a single small, high-confidence commit:
+
+1. Disable `submitButton` in `SoloGamePanel.onGameFinished`
+2. Stop routing `timerExpired` → `onGameStateUpdated` (either no-op or remove the kind)
+
+Everything else can wait.
+
+If you want, I can point to the exact lines for the `timerExpired` adjustment and propose the cleanest “Option A” switch block change.
