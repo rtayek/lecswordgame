@@ -1,19 +1,22 @@
 unnknown state
 	if anything has been edited, added, or removed then test abd fix.
 	check in project.
-	clear all the chat.md files.
+	clear ALL of the chat.md files
 
+	all .md files are empty.
 	make tar and give it to chat and ask it to analyze and recommend.
 	------------------------
 	get response from chat.
 	add response or append to chat.md. (remember status and recommendations).
 	/// is ithis top of loop?
-	git add,commit (save the all the .mds). (save what we did and what we are going to do).
+	git add,commit (save the all the .mds and any other changes). (save what we did and what we are going to do).
+	state A
 	clear contents of codex.md  (remove what happend lat time. sigal nothing hapened yet).
-	git add, commit, and push with commit message step A
-	codex.md is empt.
+	git add, commit, and push with commit message
+	codex.md is empty.
 	// we have prompt in chatgpt.md and codex.md is empty.
 	should we add a tag that indicated we are here?
+	state B (ready for codex)
 	
 	give prompt to codex (requires chat promp!)
 	clear content of chat.md (it has already been added and committed. don't let it repeat).
@@ -22,8 +25,8 @@ unnknown state
 	fix any erroes and append new codex responses to codex.md
 	check in with commit message step B
 	clear codex.md
-	
 	all .md files are empty.
+	ready for chat
 
 
 
