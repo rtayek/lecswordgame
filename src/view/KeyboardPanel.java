@@ -122,4 +122,9 @@ class KeyboardPanel extends JPanel {
 
     static final long serialVersionUID = 1L;
 
+    @Override
+    public void setEnabled(boolean enabled) {
+        super.setEnabled(enabled);
+        buttons.values().forEach(b -> b.setEnabled(enabled));
+    }
 }

@@ -65,6 +65,7 @@ class SoloGamePanel extends BaseGamePanel {
         // Disable input elements when the game is finished
         guessField.setEnabled(false);
         keyboardPanel.setEnabled(false);
+        submitButton.setEnabled(false);
 
         var vm = outcomePresenter.build(uiModel);
         if (vm == null) {
