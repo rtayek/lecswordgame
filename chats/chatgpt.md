@@ -1,117 +1,116 @@
-What the tests now do well
-1. Keyboard disable regression is nailed
+Here’s a **plain, concrete summary** of what your evil twin actually did in the **current tar**, stripped of narrative and judgment.
 
-KeyboardPanelTestCase is exactly the kind of test you want at this stage.
+---
 
-Verifies setEnabled(false) disables all key buttons
+## What he did (factually)
 
-Uses a package-private accessor, not reflection
+### 1. **Locked in the EDT policy (correctly)**
 
-Protects against a very common Swing regression
+* Added a **view-only `UiThread` helper**.
+* Wrapped **all Swing listener entry points** (`onGameStateEvent`, `onTimerEvent`) so:
 
-✅ Keep this test.
+  * Controllers/services may call from any thread.
+  * Views *always* marshal to the Swing EDT before touching UI.
+* **No `SwingUtilities.invokeLater` outside `src/view`**.
 
-2. DTO / snapshot boundary is protected
+This formally enforces “views marshal to EDT.”
 
-GameUiModelMapperTestCase asserts:
+---
 
-Untimed games produce null remaining time
+### 2. **Fixed all remaining input-disable bugs**
 
-Timed games produce real values
+* `KeyboardPanel.setEnabled(boolean)` now **propagates to all buttons**.
+* `SoloGamePanel.onGameFinished()` disables:
 
-This is excellent. This class is your DTO contract wall.
+  * guess field
+  * keyboard panel
+  * **submit button**
+  * **backspace button**
+* `MultiplayerGamePanel` does the same (backspace included).
+* Backspace handlers are now safe because the button itself is disabled (and optionally guarded).
 
-✅ This is the right place to add more tests later.
+This closes the Swing loophole where “disabled UI still mutates state.”
 
-3. Controller and session tests are behavioral, not structural
+---
 
-GameControllerTestCase and GameSessionServiceTestCase:
+### 3. **Removed duplicate / misleading timer semantics**
 
-Assert outcomes (“still in progress”, “winner chosen”)
+* **Deleted `timerExpired` entirely**:
 
-Do not assert internal field mutations
+  * No longer published.
+  * No longer handled.
+* Timer ticks now **only update the countdown display**.
+* Timeout messaging (“ran out of time”) is produced **only by finish events**, not by ticks.
 
-Do not inspect Swing or DTO internals
+This removed duplicate and order-dependent UI behavior.
 
-✅ This keeps refactoring safe.
+---
 
-The one real risk: timer test flakiness
-TimerControllerTestCase
+### 4. **Clarified timed vs untimed behavior**
 
-This test:
+* Untimed games:
 
-Uses a real scheduled executor
+  * Do **not** react to timer ticks.
+  * Do **not** show `00:00`.
+* Timed games:
 
-Uses a short (≈10ms) tick interval
+  * Initial render from snapshot.
+  * Live updates from timer ticks only.
 
-Uses latches + timeouts
+This fixed the “untimed but looks timed” confusion permanently.
 
-It’s acceptable, but it is the most likely test to flake on:
+---
 
-slow CI
+### 5. **Cleaned up small technical debt**
 
-loaded machines
+* Removed unused imports.
+* Removed redundant null checks.
+* Removed dead helper methods.
+* Simplified panels where logic had become vestigial after earlier refactors.
 
-JVMs under heavy GC
+No architectural changes here—just hygiene.
 
-What I recommend (minimum change)
+---
 
-If nothing is failing right now, do this small hardening:
+### 6. **Improved unit tests (supporting work)**
 
-Wrap setup in try/finally to guarantee cleanup
+* Converted old `main()` test to **JUnit 5**.
+* Added regression test proving:
 
-Increase await window slightly (e.g., 2s instead of 1s)
+  * disabling `KeyboardPanel` disables all keys.
+* Added a deterministic-ish timer test.
+* Left controller/session tests behavioral (not brittle).
 
-That’s enough to reduce intermittent failures by an order of magnitude.
+---
 
-I would not redesign timers or add fake schedulers unless flakes appear.
+## What he **did not** do
 
-What’s missing (but worth adding)
+* Did **not** change game rules.
+* Did **not** rework controller/service architecture.
+* Did **not** reintroduce model leakage into views.
+* Did **not** switch EDT policy to “controller publishes on EDT.”
+* Did **not** reopen DTO boundaries.
 
-These are architectural invariant tests—they prevent you from ever re-entering the refactor loop.
+---
 
-High-value missing tests (pick 2–3)
+## Bottom-line interpretation
 
-Untimed ignores timer ticks
+He:
 
-Call onTimerEvent(...) when timerDurationSeconds() == 0
+* **Finished the last correctness fixes**
+* **Formalized the threading policy**
+* **Removed the last Swing foot-guns**
+* **Stabilized the test suite**
 
-Assert UI state does not change
+This was *closure work*, not new design work.
 
-No guesses accepted during awaitingWinnerKnowledge
+You are now in a state where:
 
-Submit guess during that state
+> further changes should be driven by features or UX, not architecture.
 
-Assert state unchanged / no new guess added
+If you want, next we can:
 
-Winner-knowledge flow is event-driven
+* write a **one-page “architecture frozen” note** you can keep in the repo, or
+* stop review entirely and move to feature development.
 
-Trigger knowledge prompt
-
-Call reportWinnerKnowledge
-
-Assert next state arrives via event, not by reusing old snapshot
-
-These tests protect the decisions you just finished making.
-
-Tests I would not add
-
-Swing layout tests
-
-Pixel / color assertions
-
-“Exact sequence of events” tests
-
-Reflection-based assertions on private state
-
-Those increase maintenance cost without protecting architecture.
-
-Bottom line
-
-You are in a good place.
-
-✅ Tests reinforce your architecture instead of fighting it
-
-⚠️ One timer test should be slightly hardened
-
-➕ A few invariant tests would lock in the design permanently
+But nothing fundamental is left undone.

@@ -81,7 +81,7 @@ class GameSessionServiceTestCase {
         var cfg = new GameState.GameConfig(GameMode.multiplayer, Difficulty.normal, WordLength.five, TimerDuration.none, p1, p2);
         var session = new GameSessionService(new GameController(new DictionaryService()), new NoopTimer());
         AtomicInteger events = new AtomicInteger(0);
-        session.addGameEventListener(new controller.events.GameEventListener() {
+        session.addEventListener(new controller.events.GameEventListener() {
             @Override
             public void onGameStateEvent(controller.events.GameEventKind kind, controller.events.GameUiModel view) {
                 events.incrementAndGet();
@@ -107,7 +107,7 @@ class GameSessionServiceTestCase {
         var cfg = new GameState.GameConfig(GameMode.multiplayer, Difficulty.normal, WordLength.five, TimerDuration.none, p1, p2);
         var session = new GameSessionService(new GameController(new DictionaryService()), new NoopTimer());
         AtomicInteger events = new AtomicInteger(0);
-        session.addGameEventListener(new controller.events.GameEventListener() {
+        session.addEventListener(new controller.events.GameEventListener() {
             @Override
             public void onGameStateEvent(controller.events.GameEventKind kind, controller.events.GameUiModel view) {
                 events.incrementAndGet();
@@ -131,7 +131,7 @@ class GameSessionServiceTestCase {
         var cfg = new GameState.GameConfig(GameMode.multiplayer, Difficulty.normal, WordLength.five, TimerDuration.none, p1, p2);
         var session = new GameSessionService(new GameController(new DictionaryService()), new NoopTimer());
         AtomicInteger finishedEvents = new AtomicInteger(0);
-        session.addGameEventListener(new controller.events.GameEventListener() {
+        session.addEventListener(new controller.events.GameEventListener() {
             @Override
             public void onGameStateEvent(controller.events.GameEventKind kind, controller.events.GameUiModel view) {
                 if (kind == controller.events.GameEventKind.gameFinished) {
