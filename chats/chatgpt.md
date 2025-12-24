@@ -1,70 +1,117 @@
-I pulled the **current tar** and reviewed the unit tests under `tst/**`. Here’s what your evil twin actually did, and what I recommend next.
+What the tests now do well
+1. Keyboard disable regression is nailed
 
-## What he did (confirmed in this tar)
+KeyboardPanelTestCase is exactly the kind of test you want at this stage.
 
-### 1) Converted the old “main-method smoke test” into JUnit 5
+Verifies setEnabled(false) disables all key buttons
 
-* `tst/util/ResourceLoaderTestCase.java` is now a proper JUnit 5 test.
-* It loads `app.png` from the classpath and exercises `ResourceLoader.getScaledImage(...)`.
+Uses a package-private accessor, not reflection
 
-This is good: it now runs in your normal test workflow.
+Protects against a very common Swing regression
 
-### 2) Added a regression test for the Swing “disable container doesn’t disable children” pitfall
+✅ Keep this test.
 
-* `tst/view/KeyboardPanelTestCase.java` verifies `KeyboardPanel.setEnabled(false)` disables all key buttons.
-* To support that, `KeyboardPanel` now exposes a **package-private** `debugButtons()` accessor returning an unmodifiable collection.
+2. DTO / snapshot boundary is protected
 
-This is an excellent regression test and the accessor is appropriately scoped.
+GameUiModelMapperTestCase asserts:
 
-### 3) Added a short-interval TimerController test
+Untimed games produce null remaining time
 
-* `tst/controller/TimerControllerTestCase.java` uses an injected scheduler and a **10ms tick interval** and asserts that:
+Timed games produce real values
 
-  * time updates happen, and
-  * expiry callback happens.
-* It has `@Timeout(5)` to prevent hangs.
+This is excellent. This class is your DTO contract wall.
 
-This is “deterministic-ish” and acceptable, though it’s the test most likely to flake on a very slow machine.
+✅ This is the right place to add more tests later.
 
-### 4) Existing controller/service tests look reasonable
+3. Controller and session tests are behavioral, not structural
 
-* `GameSessionServiceTestCase` uses a `NoopTimer` and asserts finish states / timer stop behavior.
-* `GameUiModelMapperTestCase` covers snapshot mapping behavior (good place to expand).
-* `GameControllerTestCase` is thin but sane.
+GameControllerTestCase and GameSessionServiceTestCase:
 
-## Recommendations (high ROI)
+Assert outcomes (“still in progress”, “winner chosen”)
 
-### A) Make the timer test truly deterministic (optional, but best long-term)
+Do not assert internal field mutations
 
-Right now `TimerControllerTestCase` still relies on real scheduling + latches. It’s not terrible, but it’s the most likely future flake.
+Do not inspect Swing or DTO internals
 
-Best upgrade: make `TimerController` accept a tiny “scheduler/clock” abstraction and test with a fake scheduler you manually advance.
+✅ This keeps refactoring safe.
 
-If you don’t want that now: keep it, but consider increasing headroom slightly (e.g., await 2 seconds instead of 1) if it ever flakes.
+The one real risk: timer test flakiness
+TimerControllerTestCase
 
-### B) Add 2–3 invariants tests that lock in your architecture
+This test:
 
-These are the tests that prevent you from sliding back into “UI decides state”:
+Uses a real scheduled executor
 
-1. **Untimed ignores ticks**: calling `onTimerEvent` should not change timer labels when duration is none.
-2. **No guessing while awaiting winner knowledge**: submitGuess is rejected and view disables input.
-3. **Winner-knowledge flow is event-driven**: prompt triggers intent; next state arrives via event (no stale snapshot reuse).
+Uses a short (≈10ms) tick interval
 
-### C) Expand `GameUiModelMapperTestCase` first
+Uses latches + timeouts
 
-That mapper is your DTO boundary. It’s the cleanest place to test:
+It’s acceptable, but it is the most likely test to flake on:
 
-* finish reason mapping
-* status transitions reflected in DTO
-* keyboard feedback mapping per difficulty mode
+slow CI
 
-## Bottom line
+loaded machines
 
-Your evil twin’s test work is net-positive:
+JVMs under heavy GC
 
-* JUnit 5 conversion: good
-* Keyboard disable regression test: very good
-* Timer test: acceptable (watch for flakiness)
-* Controller/service tests: fine but should grow around invariants
+What I recommend (minimum change)
 
-If you want, paste the output of `find tst -name "*.java" -maxdepth 3 -print` (or just the test filenames), and I’ll propose a tight “next 5 tests” list that maximizes architectural protection without testing Swing internals.
+If nothing is failing right now, do this small hardening:
+
+Wrap setup in try/finally to guarantee cleanup
+
+Increase await window slightly (e.g., 2s instead of 1s)
+
+That’s enough to reduce intermittent failures by an order of magnitude.
+
+I would not redesign timers or add fake schedulers unless flakes appear.
+
+What’s missing (but worth adding)
+
+These are architectural invariant tests—they prevent you from ever re-entering the refactor loop.
+
+High-value missing tests (pick 2–3)
+
+Untimed ignores timer ticks
+
+Call onTimerEvent(...) when timerDurationSeconds() == 0
+
+Assert UI state does not change
+
+No guesses accepted during awaitingWinnerKnowledge
+
+Submit guess during that state
+
+Assert state unchanged / no new guess added
+
+Winner-knowledge flow is event-driven
+
+Trigger knowledge prompt
+
+Call reportWinnerKnowledge
+
+Assert next state arrives via event, not by reusing old snapshot
+
+These tests protect the decisions you just finished making.
+
+Tests I would not add
+
+Swing layout tests
+
+Pixel / color assertions
+
+“Exact sequence of events” tests
+
+Reflection-based assertions on private state
+
+Those increase maintenance cost without protecting architecture.
+
+Bottom line
+
+You are in a good place.
+
+✅ Tests reinforce your architecture instead of fighting it
+
+⚠️ One timer test should be slightly hardened
+
+➕ A few invariant tests would lock in the design permanently

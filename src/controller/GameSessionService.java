@@ -135,6 +135,9 @@ public class GameSessionService implements TurnTimer.Listener {
     @Override
     public void onTimeUpdated(PlayerSlot slot, int remainingSeconds) {
         if (currentGameState == null || slot == null) return;
+        if (!currentGameState.getConfig().timerDuration().isTimed()) {
+            return;
+        }
         publishTimer(slot, remainingSeconds);
     }
 
