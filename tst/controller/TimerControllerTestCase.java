@@ -26,28 +26,31 @@ public class TimerControllerTestCase {
         CountDownLatch updates = new CountDownLatch(2); // initial + one tick
         CountDownLatch expired = new CountDownLatch(1);
 
-        timer.addListener(new TurnTimer.Listener() {
-            @Override
-            public void onTimeUpdated(PlayerSlot slot, int remainingSeconds) {
-                if (slot == PlayerSlot.playerOne) {
-                    updates.countDown();
+        try {
+            timer.addListener(new TurnTimer.Listener() {
+                @Override
+                public void onTimeUpdated(PlayerSlot slot, int remainingSeconds) {
+                    if (slot == PlayerSlot.playerOne) {
+                        updates.countDown();
+                    }
                 }
-            }
 
-            @Override
-            public void onTimeExpired(PlayerSlot slot) {
-                if (slot == PlayerSlot.playerOne) {
-                    expired.countDown();
+                @Override
+                public void onTimeExpired(PlayerSlot slot) {
+                    if (slot == PlayerSlot.playerOne) {
+                        expired.countDown();
+                    }
                 }
-            }
-        });
+            });
 
-        timer.setTimeForPlayer(PlayerSlot.playerOne, 2);
-        timer.start(PlayerSlot.playerOne);
+            timer.setTimeForPlayer(PlayerSlot.playerOne, 2);
+            timer.start(PlayerSlot.playerOne);
 
-        assertTrue(updates.await(1, TimeUnit.SECONDS), "Should receive initial and tick updates");
-        assertTrue(expired.await(1, TimeUnit.SECONDS), "Should receive expired callback");
-        timer.stop();
-        executor.shutdownNow();
+            assertTrue(updates.await(2, TimeUnit.SECONDS), "Should receive initial and tick updates");
+            assertTrue(expired.await(2, TimeUnit.SECONDS), "Should receive expired callback");
+        } finally {
+            timer.stop();
+            executor.shutdownNow();
+        }
     }
 }

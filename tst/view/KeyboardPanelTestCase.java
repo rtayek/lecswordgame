@@ -14,5 +14,11 @@ class KeyboardPanelTestCase {
         for (var button : panel.debugButtons()) {
             assertFalse(button.isEnabled(), "Button should be disabled");
         }
+
+        panel.setEnabled(true);
+        assertTrue(panel.isEnabled(), "Panel should be re-enabled");
+        for (var button : panel.debugButtons()) {
+            assertTrue(button.isEnabled(), "Button should be re-enabled");
+        }
     }
 }
