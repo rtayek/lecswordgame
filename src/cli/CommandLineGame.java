@@ -25,43 +25,59 @@ public final class CommandLineGame {
     public static void main(String[] args) {
         System.out.println("=== Word Guessing Game (CLI) ===");
 
-        var scanner = new Scanner(System.in);
-        var wordService = new DictionaryService();
-        var gameController = new GameController(wordService);
+        try (var scanner = new Scanner(System.in)) {
+            var wordService = new DictionaryService();
+            var gameController = new GameController(wordService);
 
-        var human = new GamePlayer(new PlayerProfile(prompt(scanner, "Enter your name"), ""), true);
-        var cpu = new GamePlayer(new PlayerProfile("Computer", ""), false);
+            var human = new GamePlayer(new PlayerProfile(prompt(scanner, "Enter your name"), ""), true);
+            var cpu = new GamePlayer(new PlayerProfile("Computer", ""), false);
 
-        var config = new GameState.GameConfig(GameMode.solo, Difficulty.normal, WordLength.five, TimerDuration.none, human, cpu);
-        String cpuWord = wordService.pickWord(config.wordLength());
-        var state = gameController.startNewGame(config, null, new WordChoice(cpuWord, WordSource.rollTheDice));
+            var config = new GameState.GameConfig(GameMode.solo, Difficulty.normal, WordLength.five, TimerDuration.none, human, cpu);
 
-        System.out.println("A 5-letter word has been chosen. Start guessing!");
+            boolean playAgain = true;
+            while (playAgain) {
+                String cpuWord = wordService.pickWord(config.wordLength());
+                var state = gameController.startNewGame(config, null, new WordChoice(cpuWord, WordSource.manual));
 
-        while (state.getStatus() != GameStatus.finished) {
-            System.out.print("> ");
-            String guess = scanner.nextLine();
-            if (guess == null) break;
-            guess = guess.trim();
-            if (guess.equalsIgnoreCase("quit") || guess.isEmpty()) {
-                System.out.println("Exiting game.");
-                return;
-            }
-            try {
-                GuessOutcome outcome = gameController.submitGuess(state, human, guess);
-                printFeedback(outcome);
-                if (outcome.status() == GameStatus.finished) {
-                    break;
+                System.out.println("A 5-letter word has been chosen. Start guessing!");
+                System.out.println(cpuWord);
+
+                while (state.getStatus() != GameStatus.finished) {
+                    System.out.print("> ");
+                    String guess = scanner.nextLine();
+                    if (guess == null) return;
+                    guess = guess.trim();
+                    if (guess.equalsIgnoreCase("quit")) {
+                        System.out.println("Exiting game.");
+                        return;
+                    }
+                    if (guess.isEmpty()) {
+                        System.out.println("Please enter a guess or type 'quit'.");
+                        continue;
+                    }
+                    try {
+                        GuessOutcome outcome = gameController.submitGuess(state, human, guess);
+                        printFeedback(outcome);
+                        if (outcome.status() == GameStatus.finished) {
+                            break;
+                        }
+                    } catch (Exception e) {
+                        System.out.println("Error: " + e.getMessage());
+                    }
                 }
-            } catch (Exception e) {
-                System.out.println("Error: " + e.getMessage());
-            }
-        }
 
-        if (state.getWinner() != null && state.getWinner().equals(human)) {
-            System.out.println("You win! The word was: " + cpuWord.toUpperCase());
-        } else {
-            System.out.println("You lost. The word was: " + cpuWord.toUpperCase());
+                if (state.getWinner() != null && state.getWinner().equals(human)) {
+                    System.out.println("You win! The word was: " + cpuWord.toUpperCase());
+                } else {
+                    System.out.println("You lost. The word was: " + cpuWord.toUpperCase());
+                }
+
+                System.out.print("Play again? (y/n): ");
+                String answer = scanner.nextLine();
+                if (answer == null || !answer.trim().toLowerCase().startsWith("y")) {
+                    playAgain = false;
+                }
+            }
         }
     }
 
