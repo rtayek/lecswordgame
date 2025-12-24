@@ -4,7 +4,6 @@ import controller.AppController;
 import controller.GameOutcomePresenter;
 import controller.api.Navigation;
 import view.OutcomeRenderer;
-import controller.events.GameEventListener;
 import controller.events.GameUiModel;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
@@ -12,12 +11,10 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JTextField;
 
 import java.awt.Color;
 import javax.swing.JOptionPane;
 import controller.NextAction;
-import controller.OutcomeViewModel;
 
 class SoloGamePanel extends BaseGamePanel {
 
@@ -43,11 +40,11 @@ class SoloGamePanel extends BaseGamePanel {
 
         var backspace = new JButton("Backspace");
         backspace.addActionListener(e -> handleBackspace());
+        backspace.setName("backspaceButton"); // for clarity/tests
+        controls.add(backspace);
 
         var back = new JButton("Back to Setup");
         back.addActionListener(e -> navigation.showGameSetup());
-
-        controls.add(backspace);
         controls.add(back);
         add(controls, BorderLayout.WEST);
     }
@@ -66,6 +63,7 @@ class SoloGamePanel extends BaseGamePanel {
         guessField.setEnabled(false);
         keyboardPanel.setEnabled(false);
         submitButton.setEnabled(false);
+        disableBackspace();
 
         var vm = outcomePresenter.build(uiModel);
         if (vm == null) {
@@ -93,6 +91,15 @@ class SoloGamePanel extends BaseGamePanel {
     void updateCurrentPlayerLabelFromModel() {
         // No-op for solo game
     }
+
+    private void disableBackspace() {
+        // find the backspace button by name and disable it
+        for (var comp : ((JPanel) getComponent(2)).getComponents()) {
+            if (comp instanceof JButton btn && "backspaceButton".equals(btn.getName())) {
+                btn.setEnabled(false);
+            }
+        }
+    }
     
     @Override
     void updateTimersFromModel(GameUiModel model) {
@@ -105,9 +112,7 @@ class SoloGamePanel extends BaseGamePanel {
         }
         int value = remaining != null ? remaining : model.timerDurationSeconds();
         updateTimerLabel(playerTimerLabel, value);
-        if (remaining != null && remaining <= 0) {
-            setStatus((model.playerOne() == null ? "Player" : model.playerOne()) + " ran out of time!");
-        }
+        // Defer timeout messaging to authoritative finish events
     }
 
     @Override
@@ -115,9 +120,6 @@ class SoloGamePanel extends BaseGamePanel {
         if (timerView == null || timerView.slot() != controller.events.PlayerSlot.playerOne) return;
         if (lastModel != null && lastModel.timerDurationSeconds() == 0) return; // untimed
         updateTimerLabel(playerTimerLabel, timerView.remainingSeconds());
-        if (timerView.remainingSeconds() <= 0 && lastModel != null) {
-            var name = lastModel.playerOne() == null ? "Player" : lastModel.playerOne();
-            setStatus(name + " ran out of time!");
-        }
+        // Defer timeout messaging to finish events
     }
 }

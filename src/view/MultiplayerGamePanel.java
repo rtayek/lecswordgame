@@ -70,6 +70,7 @@ class MultiplayerGamePanel extends BaseGamePanel {
 
         var backspace = new JButton("Backspace");
         backspace.addActionListener(e -> handleBackspace());
+        backspace.setName("backspaceButton");
         
         var enter = new JButton("Enter");
         enter.addActionListener(e -> handleGuess());
@@ -135,6 +136,7 @@ class MultiplayerGamePanel extends BaseGamePanel {
             submitButton.setEnabled(false);
             guessField.setEnabled(false);
             keyboardPanel.setEnabled(false);
+            disableBackspace();
             return;
         }
 
@@ -143,6 +145,7 @@ class MultiplayerGamePanel extends BaseGamePanel {
             submitButton.setEnabled(false);
             guessField.setEnabled(false);
             keyboardPanel.setEnabled(false);
+            disableBackspace();
             return;
         }
 
@@ -168,6 +171,7 @@ class MultiplayerGamePanel extends BaseGamePanel {
         submitButton.setEnabled(true);
         guessField.setEnabled(true);
         keyboardPanel.setEnabled(true);
+        enableBackspace();
     }
 
     @Override
@@ -185,13 +189,7 @@ class MultiplayerGamePanel extends BaseGamePanel {
         }
         updateTimerLabel(playerOneTimerLabel, p1 != null ? p1 : defaultSeconds);
         updateTimerLabel(playerTwoTimerLabel, p2 != null ? p2 : defaultSeconds);
-        if (p1 != null && p1 <= 0) {
-            String name = model.playerOne() == null ? "Player" : model.playerOne();
-            setStatus(name + " ran out of time!");
-        } else if (p2 != null && p2 <= 0) {
-            String name = model.playerTwo() == null ? "Player" : model.playerTwo();
-            setStatus(name + " ran out of time!");
-        }
+        // Defer timeout messaging to finish events
     }
 
     @Override
@@ -202,19 +200,27 @@ class MultiplayerGamePanel extends BaseGamePanel {
         switch (timerView.slot()) {
             case playerOne -> {
                 updateTimerLabel(playerOneTimerLabel, remaining);
-                if (remaining <= 0 && lastModel != null) {
-                    String name = lastModel.playerOne() == null ? "Player" : lastModel.playerOne();
-                    setStatus(name + " ran out of time!");
-                }
             }
             case playerTwo -> {
                 updateTimerLabel(playerTwoTimerLabel, remaining);
-                if (remaining <= 0 && lastModel != null) {
-                    String name = lastModel.playerTwo() == null ? "Player" : lastModel.playerTwo();
-                    setStatus(name + " ran out of time!");
-                }
             }
             default -> { }
+        }
+    }
+
+    private void disableBackspace() {
+        for (var comp : ((JPanel) getComponent(3)).getComponents()) {
+            if (comp instanceof JButton btn && "backspaceButton".equals(btn.getName())) {
+                btn.setEnabled(false);
+            }
+        }
+    }
+
+    private void enableBackspace() {
+        for (var comp : ((JPanel) getComponent(3)).getComponents()) {
+            if (comp instanceof JButton btn && "backspaceButton".equals(btn.getName())) {
+                btn.setEnabled(true);
+            }
         }
     }
 }
