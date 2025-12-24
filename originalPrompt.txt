@@ -1,0 +1,59 @@
+Create a Word Guessing Game App that has both multiplayer and solo mode (player v. computer) functionality.
+
+Multiplayer mode consists of the following: one player picks a word their opponent will have to guess.
+
+There are two options to increase difficulty - first is by presenting players with the option to pick the length of the word -option available should be 3 letters, 4 letters, 5 letters, and 6 letters.
+
+Second option to change difficulty is with modes which are normal, hard and expert mode- normal mode gives clues to the player after each guess as follows: Letters will appear as green if they are in the right location, letters will appear as orange if letter is present in the word but not placed in the right location, and appear in red if they are not in the word at all.
+
+Hard mode letters will just be shown as present in the word (green) or not (red) but will not inform the player if they are in the correct location.
+
+Expert mode will only show a number next to the guessed word indicating the correct number of letters in a guess (no color clues).
+
+As players use letters they should be grayed out on the keyboard to indicate that they have been used.
+
+In normal and hard mode letters in the keyboard will turn red if used but not in the word and green if used and in the word.
+
+In expert mode, letters will just be grayed out after use with no color coding.
+
+There will also be the option to have the game timed (with an hour glass graphic near it)- this will be a timer for each player- similar to what timed chess games have - timer becomes active when one player is guessing their word and pauses when it is their opponents guessing.
+
+Option for timer should be 1 minute, 3 minutes, 4 minutes, and 5 minutes. If players pick to play a timed game when the timer goes under 1 minute for games 3-5 minutes long and under 30 seconds for 1 minute games the timer should turn red to indicate time is almost done.
+
+When players are choosing the word their opponent or the computer will have to guess there must be an option for players to have the computer pick a word for them (function should be labeled as "roll the dice" with a dice graphic) for their opponent to guess if they do not want to pick a word on their own.
+
+There should also be an option to see a list of 100 hardest/best words that over time will update as players input data that shows which words are hardest to guess.
+
+Once both players have picked the word their opponent must guess, difficulty mode, and whether or not they want the game to be time the game starts.
+
+One player makes a guess then it becomes the opponent's turn to guess (going back and forth until one player guesses correctly).
+
+There should be a button so that players can view their opponents guesses while in game.
+
+When one player successfully guesses a word they will be asked if they knew this word (or if they just guessed it by deduction). 
+
+If they did not know the word they automatically win.
+
+A win should be signaled with a sound and fun winning graphic.
+
+Once the first player guesses the word, their opponent must be told they have one more chance to guess their opponent's word.
+
+If the opponent successfully guesses the word in this last attempt they will also be asked if they knew the word.
+
+If they did know the word, the game is tied.
+
+If the opponent fails to guess the word they shift into solo-mode and can continue guessing (for the fun of it).
+
+If they continue to guess and then give up, their opponent wins.
+
+Loses should be signaled with a sound and sad graphic.
+
+If the player successfully guesses their opponent's word in solo-mode then they will be asked if they knew this word.
+
+If they did not know the word, their opponent loses, and if they did know the word the game is tied.
+
+There should be a separate screen for logging games with usernames clearly shown, level of difficulty displayed, and a number associated with each game so it can easily be recognized.
+
+There should also be a separate screen for adding friends (via link and with ability to search in contacts).
+
+There also needs to be a landing page with the app logo when it is first opened as well as a brief instruction page, and a separate profile set up page (username, profile picture).
