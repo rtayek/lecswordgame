@@ -8,3 +8,5 @@ MultiplayerGamePanel now names and disables/re-enables the Backspace button alon
 Removed redundant imports in SoloGamePanel.
 Timer messaging is now authoritative via finish events; timer ticks no longer set status.
 If you want a guard in handleBackspace itself, I can add if (!guessField.isEnabled()) return;, but with the buttons disabled the callbacks won’t fire.
+
+Added a guard to prevent backspace actions when input is disabled: BaseGamePanel.handleBackspace now returns early if guessField is not enabled, protecting against indirect invocations. This covers Solo/Multiplayer panels since they inherit the method.
