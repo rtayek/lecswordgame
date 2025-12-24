@@ -127,4 +127,9 @@ class KeyboardPanel extends JPanel {
         super.setEnabled(enabled);
         buttons.values().forEach(b -> b.setEnabled(enabled));
     }
+
+    // Package-private test hook to avoid reflection in tests.
+    java.util.Collection<JButton> debugButtons() {
+        return java.util.Collections.unmodifiableCollection(buttons.values());
+    }
 }

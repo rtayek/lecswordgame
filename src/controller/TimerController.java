@@ -16,15 +16,31 @@ import java.util.concurrent.TimeUnit;
  */
 public class TimerController implements TurnTimer {
 
-    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread t = new Thread(r, "TurnTimer");
-        t.setDaemon(true);
-        return t;
-    });
+    private final ScheduledExecutorService executor;
+    private final long tickMillis;
     private ScheduledFuture<?> ticker;
     private final Map<PlayerSlot, Integer> remainingSeconds = new HashMap<>();
     private final Set<Listener> listeners = new HashSet<>();
     private PlayerSlot activeSlot;
+
+    /**
+     * Constructs a timer with a 1-second tick interval.
+     */
+    public TimerController() {
+        this(Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "TurnTimer");
+            t.setDaemon(true);
+            return t;
+        }), 1000);
+    }
+
+    /**
+     * Package-private constructor for tests to inject executor and tick interval.
+     */
+    TimerController(ScheduledExecutorService executor, long tickMillis) {
+        this.executor = Objects.requireNonNull(executor, "executor");
+        this.tickMillis = tickMillis;
+    }
 
     @Override
     public synchronized void addListener(Listener listener) {
@@ -60,7 +76,7 @@ public class TimerController implements TurnTimer {
         if (ticker != null) {
             ticker.cancel(false);
         }
-        ticker = executor.scheduleAtFixedRate(this::tickScheduled, 1, 1, TimeUnit.SECONDS);
+        ticker = executor.scheduleAtFixedRate(this::tickScheduled, tickMillis, tickMillis, TimeUnit.MILLISECONDS);
     }
 
     @Override
