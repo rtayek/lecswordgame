@@ -30,6 +30,29 @@ class GameUiModelMapperTestCase {
         assertNull(ui.playerTwoRemaining(), "Untimed game should not expose remaining time for player two");
     }
 
+    @Test
+    void timedGamesExposeRemainingSeconds() {
+        var p1 = new model.GamePlayer(new model.PlayerProfile("P1", ""), true);
+        var p2 = new model.GamePlayer(new model.PlayerProfile("P2", ""), true);
+        var config = new model.GameState.GameConfig(model.enums.GameMode.multiplayer,
+                model.enums.Difficulty.normal,
+                model.enums.WordLength.five,
+                model.enums.TimerDuration.oneMinute,
+                p1,
+                p2);
+        var state = new model.GameState(config);
+
+        var mapper = new GameUiModelMapper(new StubTimer(Map.of(
+                PlayerSlot.playerOne, 42,
+                PlayerSlot.playerTwo, 17
+        )), new KeyboardViewBuilder());
+        GameUiModel ui = mapper.toUiModel(state);
+
+        assertEquals(42, ui.playerOneRemaining());
+        assertEquals(17, ui.playerTwoRemaining());
+        assertEquals(60, ui.timerDurationSeconds());
+    }
+
     private static final class StubTimer implements TurnTimer {
         private final Map<PlayerSlot, Integer> remaining;
         StubTimer(Map<PlayerSlot, Integer> remaining) {

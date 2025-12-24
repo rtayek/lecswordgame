@@ -1,152 +1,70 @@
-Got it. I’ve unpacked the **current tar** and verified that this really is a **small, local change**, not another architectural shift.
+I pulled the **current tar** and reviewed the unit tests under `tst/**`. Here’s what your evil twin actually did, and what I recommend next.
 
-Here’s the concise assessment.
+## What he did (confirmed in this tar)
 
-## What changed (and only what changed)
+### 1) Converted the old “main-method smoke test” into JUnit 5
 
-The delta is limited to **defensive input handling**:
+* `tst/util/ResourceLoaderTestCase.java` is now a proper JUnit 5 test.
+* It loads `app.png` from the classpath and exercises `ResourceLoader.getScaledImage(...)`.
 
-* A small guard was added to prevent text mutation when input is disabled (Backspace / guess helpers).
-* No new event kinds, no listener changes, no DTO shape changes.
-* No controller/service changes.
-* No Swing threading changes beyond what was already in place.
+This is good: it now runs in your normal test workflow.
 
-This is exactly the kind of change you *want* at this stage: localized, defensive, non-invasive.
+### 2) Added a regression test for the Swing “disable container doesn’t disable children” pitfall
 
-## Is it correct?
+* `tst/view/KeyboardPanelTestCase.java` verifies `KeyboardPanel.setEnabled(false)` disables all key buttons.
+* To support that, `KeyboardPanel` now exposes a **package-private** `debugButtons()` accessor returning an unmodifiable collection.
 
-Yes.
+This is an excellent regression test and the accessor is appropriately scoped.
 
-Adding a guard like:
+### 3) Added a short-interval TimerController test
 
-```java
-if (!guessField.isEnabled()) {
-    return;
-}
-```
+* `tst/controller/TimerControllerTestCase.java` uses an injected scheduler and a **10ms tick interval** and asserts that:
 
-inside `handleBackspace()` (and similar helpers) is:
+  * time updates happen, and
+  * expiry callback happens.
+* It has `@Timeout(5)` to prevent hangs.
 
-* redundant in the *happy path*
-* **correct in the presence of future key bindings, refactors, or test calls**
+This is “deterministic-ish” and acceptable, though it’s the test most likely to flake on a very slow machine.
 
-In Swing, redundancy here is a virtue.
+### 4) Existing controller/service tests look reasonable
 
-## Any downsides?
+* `GameSessionServiceTestCase` uses a `NoopTimer` and asserts finish states / timer stop behavior.
+* `GameUiModelMapperTestCase` covers snapshot mapping behavior (good place to expand).
+* `GameControllerTestCase` is thin but sane.
 
-None that matter.
+## Recommendations (high ROI)
 
-* No performance impact
-* No architectural coupling
-* No behavior change when input is enabled
-* No test brittleness
+### A) Make the timer test truly deterministic (optional, but best long-term)
 
-This is belt-and-suspenders done right.
+Right now `TimerControllerTestCase` still relies on real scheduling + latches. It’s not terrible, but it’s the most likely future flake.
 
-## Recommendation
+Best upgrade: make `TimerController` accept a tiny “scheduler/clock” abstraction and test with a fake scheduler you manually advance.
 
-✅ **Accept the change.**
-✅ **Do not generalize it further.**
-✅ **Do not reopen architecture.**
+If you don’t want that now: keep it, but consider increasing headroom slightly (e.g., await 2 seconds instead of 1) if it ever flakes.
 
-This fits squarely in the “polish + robustness” category and doesn’t justify any additional refactoring.
+### B) Add 2–3 invariants tests that lock in your architecture
 
-## Where you are now (important)
+These are the tests that prevent you from sliding back into “UI decides state”:
 
-You are firmly out of the architectural phase.
+1. **Untimed ignores ticks**: calling `onTimerEvent` should not change timer labels when duration is none.
+2. **No guessing while awaiting winner knowledge**: submitGuess is rejected and view disables input.
+3. **Winner-knowledge flow is event-driven**: prompt triggers intent; next state arrives via event (no stale snapshot reuse).
 
-At this point, acceptable changes look like:
+### C) Expand `GameUiModelMapperTestCase` first
 
-* guards
-* null-safety
-* clearer messages
-* test additions
-* UX polish
+That mapper is your DTO boundary. It’s the cleanest place to test:
 
-Unacceptable changes (unless a new requirement appears):
+* finish reason mapping
+* status transitions reflected in DTO
+* keyboard feedback mapping per difficulty mode
 
-* moving responsibilities
-* reworking event flow
-* “one more cleanup pass” in controllers
+## Bottom line
 
-If you want, next we can:
+Your evil twin’s test work is net-positive:
 
-* review the **unit tests** your evil twin is adding and make sure they lock in the right invariants, or
-* switch fully to **feature work** and stop reviewing structure altogether.
+* JUnit 5 conversion: good
+* Keyboard disable regression test: very good
+* Timer test: acceptable (watch for flakiness)
+* Controller/service tests: fine but should grow around invariants
 
-I reviewed the unit tests in the current tar (under `tst/**`). Overall: they’re headed in the right direction (JUnit 5, small focused assertions, and they lock in a few of the regressions you just fixed). There are a couple of structural improvements I’d recommend so the suite stays stable and doesn’t become flaky or overly coupled to internals.
-
-## What’s good
-
-* **JUnit 5 is being used** for almost everything (`@Test`, `Assertions.*`), which is the right baseline.
-* Tests are mostly **behavioral**, not UI-internals-heavy:
-
-  * `GameUiModelMapperTestCase` correctly asserts snapshot behavior (e.g., untimed games yield `null` remaining time).
-  * `GameSessionServiceTestCase` exercises timeout handling and winner selection.
-  * `GameControllerTestCase` is minimal and checks a real rule (“wrong guess stays in progress”).
-* You added a **high-value regression test** for Swing’s “container disable doesn’t disable children”:
-
-  * `KeyboardPanelTestCase.setEnabledPropagatesToAllKeys()` is exactly the kind of test that prevents backsliding.
-
-## Top recommendations
-
-### 1) Convert `ResourceLoaderTestCase` to JUnit 5
-
-`ResourceLoaderTestCase.java` is still a `public static void main` smoke test (no JUnit). It will not run under your test runner unless you special-case it.
-
-**Recommendation**
-Rewrite as a normal JUnit test:
-
-* Replace `main()` with `@Test`
-* Replace `throw new AssertionError(...)` with `assertNotNull`, `assertTrue`, etc.
-
-This makes it part of your normal “green bar” discipline.
-
-### 2) Reduce timing flakiness in `TurnTimerTestCase`
-
-`TurnTimerTestCase` uses a real `TimerController`, `CountDownLatch`, and waits up to 2 seconds. This will occasionally flake on slow machines/CI, and it gets worse over time.
-
-**Recommendation (choose one)**
-
-* **Best**: make `TimerController` injectable with a scheduler/clock and use a deterministic fake scheduler in tests.
-* **Good enough**: make tick interval configurable in `TimerController` and set it to something fast/deterministic in tests.
-* **Minimum**: keep the latch test but increase headroom and avoid asserting on “at least one update” via `getCount() < 2` (that’s a weak assertion that can still be flaky).
-
-Right now it’s “okay”, but it’s the most likely test to become intermittently red.
-
-### 3) Avoid reflection in `KeyboardPanelTestCase` (optional but worthwhile)
-
-The test uses reflection to access `KeyboardPanel.buttons`. It works, but it tightly couples the test to a private field name and representation.
-
-**Recommendation**
-Add a **package-private accessor** in `KeyboardPanel` for tests only, e.g.:
-
-* `Map<Character, JButton> debugButtons()` (package-private, no interface exposure), or
-* `Collection<JButton> allButtons()`
-
-Then tests can validate behavior without brittle reflection.
-
-### 4) Strengthen “invariant tests” (highest ROI)
-
-Given your architecture, the most valuable tests are invariants that prevent regressions:
-
-Add 3–5 targeted tests like:
-
-* **EDT policy** (if feasible): view listener entrypoints marshal to EDT (or at least do not throw when called off-EDT).
-* **No input allowed** in `awaitingWinnerKnowledge`: `submitGuess` is rejected and UI disables controls.
-* **Untimed games ignore timer ticks**: calling `onTimerEvent` doesn’t change labels or status.
-* **Winner-knowledge prompt flow is event-driven**: calling `reportWinnerKnowledge` triggers the next state via events, not synchronous reuse of old snapshots.
-
-These protect the design choices you spent time stabilizing.
-
-## Quick file-by-file notes
-
-* `tst/controller/GameControllerTestCase.java`: fine, but it’s very thin; add at least one more test around correct guess → winner set.
-* `tst/controller/GameSessionServiceTestCase.java`: good use of a `NoopTimer`; consider a spy to assert “timer stopped once” if you care about double-stop calls.
-* `tst/controller/GameUiModelMapperTestCase.java`: excellent, keep expanding this class—it’s the cleanest place to lock in UI snapshot contracts.
-* `tst/controller/TurnTimerTestCase.java`: the one to de-flake.
-* `tst/util/ResourceLoaderTestCase.java`: convert to JUnit.
-* `tst/view/KeyboardPanelTestCase.java`: good regression coverage; reflection is the only mild smell.
-
-If you want, paste the list of new tests your evil twin is adding (names + brief intent), and I’ll tell you whether they’re aimed at stable contracts or accidentally testing implementation details that will make future changes painful.
-
+If you want, paste the output of `find tst -name "*.java" -maxdepth 3 -print` (or just the test filenames), and I’ll propose a tight “next 5 tests” list that maximizes architectural protection without testing Swing internals.

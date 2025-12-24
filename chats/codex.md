@@ -1,7 +1,10 @@
-Converted ResourceLoaderTestCase.java to a proper JUnit 5 test with assertions (no more main/AssertionError smoke test).
-Made TimerController tick interval injectable (keeps 1s default) and updated it to use the configurable interval; added a fast, less-flaky TimerControllerTestCase.java that counts down with a 10ms tick and asserts updates/expiry. Old flaky TurnTimerTestCase remains deleted.
-Added a package-private test hook in KeyboardPanel.java to expose buttons; KeyboardPanelTestCase.java now uses it (no reflection).
-Notes/next steps:
+Converted ResourceLoaderTestCase to JUnit 5 (already done) and added a fast, injection-based timer test:
+TimerController now has a package-private constructor that accepts an executor and tick interval; tests can run with 10ms ticks.
+Added TimerControllerTestCase.java using the injected 10ms interval and short latches; the old flaky TurnTimerTestCase remains deleted.
+Added a test hook to KeyboardPanel (debugButtons()) and updated KeyboardPanelTestCase to drop reflection.
+Expanded GameUiModelMapperTestCase with a timed-game assertion: timed configs expose remaining seconds and duration, untimed configs keep them null.
+Status of recommendations:
 
-Please run your test suite to verify everything is green (TimerController now has an extra constructor for tests; default behavior unchanged).
-If you want the invariant tests we discussed (awaitingWinnerKnowledge disables input, untimed ticks ignored, etc.), I can add those next.
+Timer test is less flaky via injectable tick interval; if you want it fully deterministic, we can add a fake scheduler/clock later.
+Invariant tests (awaitingWinnerKnowledge disables input, untimed ticks ignored in UI, event-driven winner knowledge) are still outstanding; I haven’t added them yet.
+GameUiModelMapper tests now cover timed/untimed remaining time; we can add more (finish reasons, keyboard mapping per difficulty) if you want.
