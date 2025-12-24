@@ -184,4 +184,12 @@ public class AppController {
             case fiveMinutes -> TimerDuration.fiveMinutes;
         };
     }
+    public static AppController create() {
+        var persistenceService = new PersistenceService();
+        var wordService = new DictionaryService();
+        var timerController = new TimerController();
+        var gameController = new GameController(wordService);
+        return new AppController(persistenceService, gameController, timerController);
+    }
+
 }
