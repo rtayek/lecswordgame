@@ -8,19 +8,12 @@ import controller.events.PlayerProfileView;
 import controller.events.WordChoiceView;
 import controller.events.WordLengthView;
 import controller.events.TimerDurationView;
-import controller.events.WordSourceView;
 import controller.events.DifficultyView;
 import java.util.List;
 import java.util.stream.Collectors;
-import model.GamePlayer;
-import model.GameState.GameConfig;
-import model.PlayerProfile;
-import model.WordChoice;
-import model.enums.Difficulty;
-import model.enums.GameMode;
-import model.enums.TimerDuration;
-import model.enums.WordLength;
 import util.PersistenceService;
+import model.GameState.GameConfig;
+import model.WordChoice;
 
 public class AppController {
 
@@ -28,6 +21,7 @@ public class AppController {
     private final WordSelectionFlow wordSelectionFlow = new WordSelectionFlow();
     private final ProfileService profileService;
     private final NavigationCoordinator navigationCoordinator = new NavigationCoordinator();
+    private final ViewToModelMapper mapper = new ViewToModelMapper();
 
     public AppController(PersistenceService persistenceService, GameController gameController, TurnTimer turnTimer) {
         this.gameSessionService = new GameSessionService(gameController, turnTimer);
@@ -48,7 +42,7 @@ public class AppController {
     }
     
     public void playerOneWordSelected(WordChoiceView wordChoice) {
-        var startRequest = wordSelectionFlow.playerOneSelected(toModel(wordChoice));
+        var startRequest = wordSelectionFlow.playerOneSelected(mapper.toModel(wordChoice));
         if (startRequest != null) {
             startGame(startRequest.config(), startRequest.playerOneWord(), startRequest.playerTwoWord());
         } else {
@@ -58,14 +52,14 @@ public class AppController {
     }
 
     public void playerTwoWordSelected(WordChoiceView wordChoice) {
-        var startRequest = wordSelectionFlow.playerTwoSelected(toModel(wordChoice));
+        var startRequest = wordSelectionFlow.playerTwoSelected(mapper.toModel(wordChoice));
         startGame(startRequest.config(), startRequest.playerOneWord(), startRequest.playerTwoWord());
     }
 
     private void startGame(GameConfig config, WordChoice p1Word, WordChoice p2Word) {
         var state = gameSessionService.startNewGame(config, p1Word, p2Word);
 
-        if (config.mode() == GameMode.multiplayer) {
+        if (config.mode() == model.enums.GameMode.multiplayer) {
             navigationCoordinator.showMultiplayerGame();
         } else {
             navigationCoordinator.showSoloGame();
@@ -89,7 +83,7 @@ public class AppController {
 
     public void setCurrentProfile(PlayerProfileView currentProfile) {
         if (currentProfile == null) return;
-        profileService.saveProfile(new PlayerProfile(currentProfile.username(), currentProfile.avatarPath()));
+        profileService.saveProfile(new model.PlayerProfile(currentProfile.username(), currentProfile.avatarPath()));
     }
 
     public List<GameLogEntryView> getGameLog() {
@@ -103,8 +97,9 @@ public class AppController {
                 .collect(Collectors.toList());
     }
 
-    public void addGameLogEntry(model.GameLogEntry entry) {
-        profileService.addGameLogEntry(entry);
+    public void addGameLogEntry(GameLogEntryView entry) {
+        if (entry == null) return;
+        profileService.addGameLogEntry(mapper.toModel(entry));
     }
     
     public List<HardWordEntryView> getHardestWords() {
@@ -114,11 +109,11 @@ public class AppController {
     }
 
     public String pickWord(WordLengthView length) {
-        return gameSessionService.pickWord(toModel(length));
+        return gameSessionService.pickWord(mapper.toModel(length));
     }
 
     public boolean isValidWord(String word, WordLengthView length) {
-        return gameSessionService.isValidWord(word, toModel(length));
+        return gameSessionService.isValidWord(word, mapper.toModel(length));
     }
 
     public void reportWinnerKnowledge(boolean winnerKnewWord) {
@@ -129,7 +124,7 @@ public class AppController {
         if (config == null) return null;
         var opponent = isPlayerOneTurn ? config.playerTwo() : config.playerOne();
         var name = opponent != null && opponent.profile() != null ? opponent.profile().username() : "Player";
-        boolean isMultiplayer = config.mode() == GameMode.multiplayer;
+        boolean isMultiplayer = config.mode() == model.enums.GameMode.multiplayer;
         return new WordSelectionViewData(name, config.wordLength().length(), isMultiplayer, isPlayerOneTurn);
     }
 
@@ -137,7 +132,7 @@ public class AppController {
                                      WordLengthView wordLength, TimerDurationView timer) {
         var p1 = new model.GamePlayer(new model.PlayerProfile(playerOneName, ""), true);
         var p2 = new model.GamePlayer(new model.PlayerProfile(playerTwoName, ""), true);
-        var config = new GameConfig(model.enums.GameMode.multiplayer, toModel(difficulty), toModel(wordLength), toModel(timer), p1, p2);
+        var config = new GameConfig(model.enums.GameMode.multiplayer, mapper.toModel(difficulty), mapper.toModel(wordLength), mapper.toModel(timer), p1, p2);
         requestNewGame(config);
     }
 
@@ -145,45 +140,10 @@ public class AppController {
                               WordLengthView wordLength, TimerDurationView timer) {
         var human = new model.GamePlayer(new model.PlayerProfile(playerName, ""), true);
         var cpu = new model.GamePlayer(new model.PlayerProfile("Computer", ""), false);
-        var config = new GameConfig(model.enums.GameMode.solo, toModel(difficulty), toModel(wordLength), toModel(timer), human, cpu);
+        var config = new GameConfig(model.enums.GameMode.solo, mapper.toModel(difficulty), mapper.toModel(wordLength), mapper.toModel(timer), human, cpu);
         requestNewGame(config);
     }
 
-    private WordChoice toModel(WordChoiceView view) {
-        if (view == null) return null;
-        var source = view.source() == WordSourceView.rollTheDice ? model.enums.WordSource.rollTheDice : model.enums.WordSource.manual;
-        return new WordChoice(view.word(), source);
-    }
-
-    private Difficulty toModel(DifficultyView view) {
-        if (view == null) return Difficulty.normal;
-        return switch (view) {
-            case normal -> Difficulty.normal;
-            case hard -> Difficulty.hard;
-            case expert -> Difficulty.expert;
-        };
-    }
-
-    private WordLength toModel(WordLengthView view) {
-        if (view == null) return WordLength.five;
-        return switch (view) {
-            case three -> WordLength.three;
-            case four -> WordLength.four;
-            case five -> WordLength.five;
-            case six -> WordLength.six;
-        };
-    }
-
-    private TimerDuration toModel(TimerDurationView view) {
-        if (view == null) return TimerDuration.none;
-        return switch (view) {
-            case none -> TimerDuration.none;
-            case oneMinute -> TimerDuration.oneMinute;
-            case threeMinutes -> TimerDuration.threeMinutes;
-            case fourMinutes -> TimerDuration.fourMinutes;
-            case fiveMinutes -> TimerDuration.fiveMinutes;
-        };
-    }
     public static AppController create() {
         var persistenceService = new PersistenceService();
         var wordService = new DictionaryService();
