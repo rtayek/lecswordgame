@@ -14,7 +14,6 @@ import java.util.stream.Collectors;
 import util.PersistenceService;
 import model.GameState.GameConfig;
 import model.WordChoice;
-import model.enums.Difficulty;
 
 public class AppController {
 

@@ -1,28 +1,23 @@
-I unpacked the current tar and looked specifically for the architectural refactorings we discussed. Here’s what he actually did (with a quick assessment).
+I unpacked the current tar and reviewed the *actual* changes (not the chat summaries). Here’s what he did, and whether it was a net improvement.
 
-## What he changed
+## What he actually changed
 
-### 1) Added a centralized view→model mapper
+### 1) Added `ViewToModelMapper` (good)
 
-New file:
+New file: `src/controller/ViewToModelMapper.java` (package-private)
 
-* `src/controller/ViewToModelMapper.java` (package-private)
+It centralizes DTO → domain conversions for:
 
-It centralizes conversions from DTOs to domain types:
+* `WordChoiceView` → `model.WordChoice` (including `WordSourceView`)
+* `DifficultyView` → `model.enums.Difficulty` (+ a nullable variant)
+* `WordLengthView` → `model.enums.WordLength`
+* `TimerDurationView` → `model.enums.TimerDuration`
+* `GameLogEntryView` → `model.GameLogEntry`
+* plus a `toView(Difficulty)` mapping back to `DifficultyView`
 
-* `WordChoiceView -> model.WordChoice` (including `WordSourceView -> WordSource`)
-* `DifficultyView -> model.enums.Difficulty` (plus a nullable variant)
-* `WordLengthView -> model.enums.WordLength`
-* `TimerDurationView -> model.enums.TimerDuration`
-* `GameLogEntryView -> model.GameLogEntry` (maps `wordLength` int back to `WordLength`)
+This is exactly the “stop sprinkling mapping logic across AppController” refactoring.
 
-This directly implements the “move mapping out of AppController” recommendation.
-
-**Verdict:** Good change. It shrinks the surface area of “random conversion logic” and makes it easier to unit test and audit.
-
----
-
-### 2) Made `AppController.addGameLogEntry` DTO-only
+### 2) Changed `AppController.addGameLogEntry` to DTO-only (good)
 
 `AppController` now exposes:
 
@@ -30,56 +25,66 @@ This directly implements the “move mapping out of AppController” recommendat
 public void addGameLogEntry(GameLogEntryView entry)
 ```
 
-and delegates to:
+and maps it internally to `model.GameLogEntry` via the mapper before calling `ProfileService`.
 
-```java
-profileService.addGameLogEntry(mapper.toModel(entry));
-```
+This removes the obvious “model leak” from the controller surface.
 
-So the last obvious public “model leak” is gone.
+### 3) Updated `AppController` to use the mapper for start/selection flows (good)
 
-**Verdict:** Good change. This aligns with your “DTO boundary” story and prevents accidental view/model coupling later.
+He replaced a bunch of ad-hoc conversions with `mapper.toModel(...)` calls:
 
----
+* word selection (`playerOneWordSelected`, `playerTwoWordSelected`)
+* dictionary ops (`pickWord`, `isValidWord`)
+* game start config (`startSoloGame`, `startMultiplayerGame`)
+* game log view (`getGameLog`) uses `mapper.toView(e.difficulty())`
 
-### 3) Updated start/selection flows to use the mapper consistently
+### 4) Added `ViewToModelMapperTestCase` (good)
 
-In `AppController`:
+New test: `tst/controller/ViewToModelMapperTestCase.java`
 
-* `playerOneWordSelected` / `playerTwoWordSelected` now call `mapper.toModel(wordChoice)`
-* `pickWord(length)` and `isValidWord(word, length)` now use `mapper.toModel(length)`
-* `startSoloGame` / `startMultiplayerGame` use `mapper.toModel(difficulty/wordLength/timer)`
+It covers:
 
-So conversions are no longer duplicated across the controller.
+* defaults (null difficulty/length/timer)
+* word choice source mapping
+* log entry mapping including null/unknown word lengths
 
-**Verdict:** Good. Consistency matters here.
+This is the right level: mapping is now a unit-tested contract.
 
----
+## Quality notes / recommendations
 
-## What I would still tweak (small, optional)
+### A) `fromLength(int)` currently returns `null` for unknown lengths
 
-### A) Move `mapDifficulty` into the mapper (consistency polish)
+In `ViewToModelMapper`, `fromLength(7)` returns `null`. The tests assert this behavior.
 
-`getGameLog()` still uses a private `mapDifficulty(model.enums.Difficulty)` in `AppController`. It’s fine, but slightly inconsistent now that you have a dedicated mapper.
+That’s fine, but decide what you want long-term:
 
-**Optional:** add `DifficultyView toView(Difficulty)` to a small “ModelToViewMapper” or extend the existing mapper (renaming it if you do both directions).
+* If you want “unknown” to be representable: `null` is OK.
+* If you want “always a valid enum”: pick a default (e.g., `five`) and test that instead.
 
-### B) `ViewToModelMapper.toModel(GameLogEntryView)` could be simplified
+Given you’re already using `0` in `getGameLog()` when `wordLength == null`, your current approach is consistent.
 
-It currently loops through `WordLength.values()` to find the matching length. That’s fine, but if you later add lengths, you’ll want a single utility like:
+### B) Mapper is currently “mostly” one-way
 
-* `WordLength.fromLength(int)` (domain-side) or
-* a tiny private helper in the mapper
+You have `toView(Difficulty)` but not the other model→view mappings. That’s not wrong—just a smell that mapping may creep back into `AppController` as you add features.
+
+If you notice more model→view mapping appearing, either:
+
+* rename the mapper to something neutral (e.g., `ViewModelMapper`) and add both directions, or
+* split cleanly into `ViewToModelMapper` and `ModelToViewMapper`.
 
 Not urgent.
 
----
+### C) Minor hygiene: `AppController` has a couple of unused imports
+
+`AppController` imports `model.enums.Difficulty` but doesn’t use it (in the version in this tar). Eclipse will flag it.
 
 ## Bottom line
 
-He implemented the two “last mile” architectural improvements we identified:
+This was a **good** “high-level refactoring” pass:
 
-1. **Centralize DTO→model mapping**
-2. **Remove the remaining DTO boundary leak (`addGameLogEntry`)**
+* reduced API leakage
+* centralized conversion logic
+* added tests for the conversions
+* did not disturb event flow / EDT policy / DTO-only rendering
 
-These are the right kind of changes: small, clarifying, low-risk, and they do not re-open the architecture loop.
+If you keep anything from this round, keep the mapper + the DTO-only log entry API + the mapper tests.
