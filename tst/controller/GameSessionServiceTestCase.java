@@ -2,6 +2,8 @@ package controller;
 
 import controller.events.PlayerSlot;
 import controller.events.FinishReasonView;
+import controller.GameUiModelMapper;
+import controller.KeyboardViewBuilder;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import model.GameState;
@@ -25,7 +27,8 @@ class GameSessionServiceTestCase {
         var p1 = new model.GamePlayer(new PlayerProfile("P1", ""), true);
         var p2 = new model.GamePlayer(new PlayerProfile("P2", ""), true);
         var cfg = new GameState.GameConfig(GameMode.multiplayer, Difficulty.normal, WordLength.five, TimerDuration.none, p1, p2);
-        var session = new GameSessionService(new GameController(new DictionaryService()), new NoopTimer());
+        var timer = new NoopTimer();
+        var session = new GameSessionService(new GameController(new DictionaryService()), timer, new GameUiModelMapper(timer, new KeyboardViewBuilder()));
         var state = session.startNewGame(cfg, new WordChoice("APPLE", WordSource.manual), new WordChoice("GRAPE", WordSource.manual));
 
         session.submitGuess("GRAPE"); // p1 guessing p2's word
@@ -47,7 +50,8 @@ class GameSessionServiceTestCase {
         var p1 = new model.GamePlayer(new PlayerProfile("P1", ""), true);
         var p2 = new model.GamePlayer(new PlayerProfile("P2", ""), true);
         var cfg = new GameState.GameConfig(GameMode.multiplayer, Difficulty.normal, WordLength.five, TimerDuration.oneMinute, p1, p2);
-        var session = new GameSessionService(new GameController(new DictionaryService()), timer);
+        var mapper = new GameUiModelMapper(timer, new KeyboardViewBuilder());
+        var session = new GameSessionService(new GameController(new DictionaryService()), timer, mapper);
         final FinishReasonView[] reason = new FinishReasonView[1];
         session.addEventListener(new controller.events.GameEventListener() {
             @Override
@@ -74,7 +78,8 @@ class GameSessionServiceTestCase {
         var p1 = new model.GamePlayer(new PlayerProfile("P1", ""), true);
         var p2 = new model.GamePlayer(new PlayerProfile("P2", ""), true);
         var cfg = new GameState.GameConfig(GameMode.multiplayer, Difficulty.normal, WordLength.five, TimerDuration.none, p1, p2);
-        var session = new GameSessionService(new GameController(new DictionaryService()), new NoopTimer());
+        var timer = new NoopTimer();
+        var session = new GameSessionService(new GameController(new DictionaryService()), timer, new GameUiModelMapper(timer, new KeyboardViewBuilder()));
         var state = session.startNewGame(cfg, new WordChoice("APPLE", WordSource.manual), new WordChoice("GRAPE", WordSource.manual));
 
         // Force the status to awaitingWinnerKnowledge to validate guard.
@@ -91,7 +96,8 @@ class GameSessionServiceTestCase {
         var p1 = new model.GamePlayer(new PlayerProfile("P1", ""), true);
         var p2 = new model.GamePlayer(new PlayerProfile("P2", ""), true);
         var cfg = new GameState.GameConfig(GameMode.multiplayer, Difficulty.normal, WordLength.five, TimerDuration.none, p1, p2);
-        var session = new GameSessionService(new GameController(new DictionaryService()), new NoopTimer());
+        var timer = new NoopTimer();
+        var session = new GameSessionService(new GameController(new DictionaryService()), timer, new GameUiModelMapper(timer, new KeyboardViewBuilder()));
         AtomicInteger events = new AtomicInteger(0);
         session.addEventListener(new controller.events.GameEventListener() {
             @Override
@@ -118,7 +124,8 @@ class GameSessionServiceTestCase {
         var p1 = new model.GamePlayer(new PlayerProfile("P1", ""), true);
         var p2 = new model.GamePlayer(new PlayerProfile("P2", ""), true);
         var cfg = new GameState.GameConfig(GameMode.multiplayer, Difficulty.normal, WordLength.five, TimerDuration.none, p1, p2);
-        var session = new GameSessionService(new GameController(new DictionaryService()), new NoopTimer());
+        var timer = new NoopTimer();
+        var session = new GameSessionService(new GameController(new DictionaryService()), timer, new GameUiModelMapper(timer, new KeyboardViewBuilder()));
         AtomicInteger events = new AtomicInteger(0);
         session.addEventListener(new controller.events.GameEventListener() {
             @Override
@@ -143,7 +150,8 @@ class GameSessionServiceTestCase {
         var p1 = new model.GamePlayer(new PlayerProfile("P1", ""), true);
         var p2 = new model.GamePlayer(new PlayerProfile("P2", ""), true);
         var cfg = new GameState.GameConfig(GameMode.multiplayer, Difficulty.normal, WordLength.five, TimerDuration.none, p1, p2);
-        var session = new GameSessionService(new GameController(new DictionaryService()), new NoopTimer());
+        var timer = new NoopTimer();
+        var session = new GameSessionService(new GameController(new DictionaryService()), timer, new GameUiModelMapper(timer, new KeyboardViewBuilder()));
         AtomicInteger finishedEvents = new AtomicInteger(0);
         session.addEventListener(new controller.events.GameEventListener() {
             @Override

@@ -1,9 +1,8 @@
-(done in previous commit)
+Implemented the “mapper injection” tweak to keep GameSessionService from acting as a composition root:
 
-Implemented explicit finish-reason support and mapping cleanup:
+GameSessionService now takes a GameUiModelMapper in its constructor (no longer constructs one internally).
+AppController constructs and injects the mapper (new GameUiModelMapper(turnTimer, new KeyboardViewBuilder())).
+All test sites updated to pass a mapper (using the test timers) instead of relying on internal creation.
+Also made the tiny backspace guard tweak: BaseGamePanel.handleBackspace() now checks isEnabled() before reading text.
 
-Added FinishReasonView enum and included finishReason in GameUiModel.
-GameUiModelMapper now accepts an optional finish reason; GameSessionService publishes it (guessed on guess/knowledge completion, timeout on expiration).
-GameSessionServiceTestCase now asserts timeout finish reason and adjusts event counting.
-Mapping utility renamed behavior: ViewToModelMapper gained toView(Difficulty) earlier and now has a helper for word-length mapping.
-Cleaned AppController to use mapper for difficulty mapping and removed unused import.
+If you want, I can also rename ViewModelMapper tests/files to match the new naming (already done) and run the test suite.

@@ -9,6 +9,8 @@ import controller.events.WordChoiceView;
 import controller.events.WordLengthView;
 import controller.events.TimerDurationView;
 import controller.events.DifficultyView;
+import controller.GameUiModelMapper;
+import controller.KeyboardViewBuilder;
 import java.util.List;
 import java.util.stream.Collectors;
 import util.PersistenceService;
@@ -24,7 +26,7 @@ public class AppController {
     private final ViewModelMapper mapper = new ViewModelMapper();
 
     public AppController(PersistenceService persistenceService, GameController gameController, TurnTimer turnTimer) {
-        this.gameSessionService = new GameSessionService(gameController, turnTimer);
+        this.gameSessionService = new GameSessionService(gameController, turnTimer, new GameUiModelMapper(turnTimer, new KeyboardViewBuilder()));
         this.profileService = new ProfileService(persistenceService);
     }
     

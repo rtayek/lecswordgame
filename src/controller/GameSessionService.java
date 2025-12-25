@@ -28,11 +28,11 @@ public class GameSessionService implements TurnTimer.Listener {
     private GameState currentGameState;
     private final List<GameEventListener> eventListeners = new ArrayList<>();
 
-    public GameSessionService(GameController gameController, TurnTimer turnTimer) {
+    public GameSessionService(GameController gameController, TurnTimer turnTimer, GameUiModelMapper uiMapper) {
         this.gameController = gameController;
         this.turnTimer = turnTimer;
         this.turnTimer.addListener(this);
-        this.uiMapper = new GameUiModelMapper(turnTimer, new KeyboardViewBuilder());
+        this.uiMapper = uiMapper;
     }
 
     public void addEventListener(GameEventListener listener) {
