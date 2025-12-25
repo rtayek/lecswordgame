@@ -9,6 +9,7 @@ import controller.events.KeyboardView;
 import controller.events.LetterFeedbackView;
 import controller.events.PlayerSlot;
 import controller.events.FinishStateView;
+import controller.events.FinishReasonView;
 import java.util.List;
 import model.GamePlayer;
 import model.GameState;
@@ -29,6 +30,10 @@ class GameUiModelMapper {
     }
 
     GameUiModel toUiModel(GameState state) {
+        return toUiModel(state, null);
+    }
+
+    GameUiModel toUiModel(GameState state, FinishReasonView finishReason) {
         if (state == null) return null;
         var config = state.getConfig();
         String playerOneName = name(config.playerOne());
@@ -62,6 +67,7 @@ class GameUiModelMapper {
                 state.getWinnerKnewWord(),
                 mapFinishState(state.getPlayerFinishState(config.playerOne())),
                 mapFinishState(state.getPlayerFinishState(config.playerTwo())),
+                finishReason,
                 playerOneName,
                 playerTwoName,
                 timerSeconds,

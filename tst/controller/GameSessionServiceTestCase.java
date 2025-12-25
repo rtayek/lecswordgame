@@ -1,6 +1,7 @@
 package controller;
 
 import controller.events.PlayerSlot;
+import controller.events.FinishReasonView;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import model.GameState;
@@ -47,6 +48,16 @@ class GameSessionServiceTestCase {
         var p2 = new model.GamePlayer(new PlayerProfile("P2", ""), true);
         var cfg = new GameState.GameConfig(GameMode.multiplayer, Difficulty.normal, WordLength.five, TimerDuration.oneMinute, p1, p2);
         var session = new GameSessionService(new GameController(new DictionaryService()), timer);
+        final FinishReasonView[] reason = new FinishReasonView[1];
+        session.addEventListener(new controller.events.GameEventListener() {
+            @Override
+            public void onGameStateEvent(controller.events.GameEventKind kind, controller.events.GameUiModel view) {
+                if (kind == controller.events.GameEventKind.gameFinished) {
+                    reason[0] = view.finishReason();
+                }
+            }
+            @Override public void onTimerEvent(controller.events.TimerView timer) { }
+        });
         var state = session.startNewGame(cfg, new WordChoice("APPLE", WordSource.manual), new WordChoice("GRAPE", WordSource.manual));
 
         session.onTimeExpired(PlayerSlot.playerOne);
@@ -55,6 +66,7 @@ class GameSessionServiceTestCase {
         assertEquals(p2, state.getWinner(), "Opponent should win on timeout");
         assertTrue(stopped.get(), "Timer should stop on finish");
         assertEquals(FinishState.finishedFail, state.getPlayerFinishState(p1), "Expired player should be marked failed");
+        assertEquals(FinishReasonView.timeout, reason[0], "Finish reason should be timeout");
     }
 
     @Test

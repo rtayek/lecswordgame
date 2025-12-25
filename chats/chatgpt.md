@@ -1,90 +1,60 @@
-I unpacked the current tar and reviewed the *actual* changes (not the chat summaries). Here’s what he did, and whether it was a net improvement.
+At this point, you’re in the “architecture is good enough to build on” zone. I would not recommend any broad refactors. There are, however, **three** high-level improvements that can pay off later without restarting churn. Think of them as “future-proofing hooks,” not redesign.
 
-## What he actually changed
+## 1) Explicit “finish reason” in the DTO (small, high leverage)
 
-### 1) Added `ViewToModelMapper` (good)
+Right now, the UI infers some messaging/flows from status + knowledge flags. You’ve already fixed the worst of it by making finish events authoritative, but one field would make everything simpler and less error-prone:
 
-New file: `src/controller/ViewToModelMapper.java` (package-private)
+Add to `GameUiModel` (view-only):
 
-It centralizes DTO → domain conversions for:
+* `FinishReasonView { guessed, timeout, giveUp, aborted }` (whatever you actually have)
 
-* `WordChoiceView` → `model.WordChoice` (including `WordSourceView`)
-* `DifficultyView` → `model.enums.Difficulty` (+ a nullable variant)
-* `WordLengthView` → `model.enums.WordLength`
-* `TimerDurationView` → `model.enums.TimerDuration`
-* `GameLogEntryView` → `model.GameLogEntry`
-* plus a `toView(Difficulty)` mapping back to `DifficultyView`
+Use it for:
 
-This is exactly the “stop sprinkling mapping logic across AppController” refactoring.
+* deciding whether to ask “did you know the word?”
+* deciding timeout messaging (instead of deducing from timer == 0)
+* game log entries (stable semantics)
 
-### 2) Changed `AppController.addGameLogEntry` to DTO-only (good)
+**Why it’s worth it:** it prevents subtle regressions when you add more end conditions.
 
-`AppController` now exposes:
+## 2) Separate “read model” mapping from “event publishing” (only if it grows)
 
-```java
-public void addGameLogEntry(GameLogEntryView entry)
-```
+You currently have a good `GameUiModelMapper`. If the `GameSessionService` starts accumulating more “presentation-ish” logic, keep the rule:
 
-and maps it internally to `model.GameLogEntry` via the mapper before calling `ProfileService`.
+* `GameSessionService`: orchestration + event sequencing
+* `GameUiModelMapper`: pure mapping
 
-This removes the obvious “model leak” from the controller surface.
+If you notice mapper calls interleaving with a lot of “if timed do this, if status do that,” consider a tiny extraction:
 
-### 3) Updated `AppController` to use the mapper for start/selection flows (good)
+* `GameUiPublisher` (publishes events)
+* `GameSessionService` (coordinates)
 
-He replaced a bunch of ad-hoc conversions with `mapper.toModel(...)` calls:
+**Not urgent** unless `GameSessionService` is starting to feel like a god class.
 
-* word selection (`playerOneWordSelected`, `playerTwoWordSelected`)
-* dictionary ops (`pickWord`, `isValidWord`)
-* game start config (`startSoloGame`, `startMultiplayerGame`)
-* game log view (`getGameLog`) uses `mapper.toView(e.difficulty())`
+## 3) Introduce a tiny “GameFacade” boundary for future UIs (optional)
 
-### 4) Added `ViewToModelMapperTestCase` (good)
+You’ve already got `AppController` as the main façade. If you later do CLI/JavaFX/network play, it helps to split *interface only* (not implementation):
 
-New test: `tst/controller/ViewToModelMapperTestCase.java`
+* `GameFacade` (start, submitGuess, reportWinnerKnowledge, addListener/removeListener)
+* `ProfileFacade` (get/set profile, logs)
+* `NavigationFacade` (setup/flow callbacks)
 
-It covers:
+You don’t need to split files now; you can start by introducing interfaces and have `AppController` implement them. That makes future alternate UIs far easier.
 
-* defaults (null difficulty/length/timer)
-* word choice source mapping
-* log entry mapping including null/unknown word lengths
+**Again, optional**—only useful if you expect additional UIs or integration.
 
-This is the right level: mapping is now a unit-tested contract.
+---
 
-## Quality notes / recommendations
+## What I do **not** recommend
 
-### A) `fromLength(int)` currently returns `null` for unknown lengths
+* State pattern rewrite of `GameState`
+* More DTO churn for its own sake
+* More event kinds
+* More “cleanup passes” in controller/view
 
-In `ViewToModelMapper`, `fromLength(7)` returns `null`. The tests assert this behavior.
+You have guardrails, you have tests, and the architecture is stable.
 
-That’s fine, but decide what you want long-term:
+---
 
-* If you want “unknown” to be representable: `null` is OK.
-* If you want “always a valid enum”: pick a default (e.g., `five`) and test that instead.
+### My practical recommendation
 
-Given you’re already using `0` in `getGameLog()` when `wordLength == null`, your current approach is consistent.
-
-### B) Mapper is currently “mostly” one-way
-
-You have `toView(Difficulty)` but not the other model→view mappings. That’s not wrong—just a smell that mapping may creep back into `AppController` as you add features.
-
-If you notice more model→view mapping appearing, either:
-
-* rename the mapper to something neutral (e.g., `ViewModelMapper`) and add both directions, or
-* split cleanly into `ViewToModelMapper` and `ModelToViewMapper`.
-
-Not urgent.
-
-### C) Minor hygiene: `AppController` has a couple of unused imports
-
-`AppController` imports `model.enums.Difficulty` but doesn’t use it (in the version in this tar). Eclipse will flag it.
-
-## Bottom line
-
-This was a **good** “high-level refactoring” pass:
-
-* reduced API leakage
-* centralized conversion logic
-* added tests for the conversions
-* did not disturb event flow / EDT policy / DTO-only rendering
-
-If you keep anything from this round, keep the mapper + the DTO-only log entry API + the mapper tests.
+If you do one more “architectural” thing, do **FinishReasonView**. It’s small, testable, and will reduce future branching and UI inference. Everything else can wait until a real feature forces it.

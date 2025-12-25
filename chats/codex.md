@@ -1,9 +1,7 @@
-Removed the unused model.enums.Difficulty import from AppController (hygiene cleanup).
+mplemented explicit finish-reason support and mapping cleanup:
 
-it.
-
-
-I already removed the unused model.enums.Difficulty import from AppController.
-
-Re: mapper directionality: today the only model→view conversion is difficulty in getGameLog(), and it’s handled inside ViewToModelMapper via toView(Difficulty). If more model→view mappings start showing up, we can either rename/split the mapper (e.g., ViewModelMapper with both directions, or separate ViewToModelMapper/ModelToViewMapper). For now, the surface is still clean and centralized.
-
+Added FinishReasonView enum and included finishReason in GameUiModel.
+GameUiModelMapper now accepts an optional finish reason; GameSessionService publishes it (guessed on guess/knowledge completion, timeout on expiration).
+GameSessionServiceTestCase now asserts timeout finish reason and adjusts event counting.
+Mapping utility renamed behavior: ViewToModelMapper gained toView(Difficulty) earlier and now has a helper for word-length mapping.
+Cleaned AppController to use mapper for difficulty mapping and removed unused import.

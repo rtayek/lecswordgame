@@ -82,7 +82,7 @@ public class GameSessionService implements TurnTimer.Listener {
         publishState(GameEventKind.gameStateUpdated);
 
         if (newStatus == GameStatus.finished) {
-            publishState(GameEventKind.gameFinished);
+            publishState(GameEventKind.gameFinished, controller.events.FinishReasonView.guessed);
             turnTimer.stop();
         } else if (newStatus == GameStatus.awaitingWinnerKnowledge) {
             // Pause timers while waiting for winner knowledge response.
@@ -116,11 +116,11 @@ public class GameSessionService implements TurnTimer.Listener {
         GameStatus after = currentGameState.getStatus();
 
         if (after == GameStatus.finished || after == GameStatus.soloChase) {
-            publishState(GameEventKind.gameFinished);
+            publishState(GameEventKind.gameFinished, controller.events.FinishReasonView.guessed);
             turnTimer.stop();
         } else {
             publishState(GameEventKind.gameStateUpdated);
-            publishState(GameEventKind.gameFinished);
+            publishState(GameEventKind.gameFinished, controller.events.FinishReasonView.guessed);
             if (after == GameStatus.waitingForFinalGuess
                     && currentGameState.getConfig().timerDuration().isTimed()
                     && currentGameState.getCurrentTurn() != null) {
@@ -156,11 +156,15 @@ public class GameSessionService implements TurnTimer.Listener {
         currentGameState.handleTimeout(player);
         turnTimer.stop();
         publishTimer(slot, 0);
-        publishState(GameEventKind.gameFinished);
+        publishState(GameEventKind.gameFinished, controller.events.FinishReasonView.timeout);
     }
 
     private void publishState(GameEventKind kind) {
-        var uiModel = uiMapper.toUiModel(currentGameState);
+        publishState(kind, null);
+    }
+
+    private void publishState(GameEventKind kind, controller.events.FinishReasonView finishReason) {
+        var uiModel = uiMapper.toUiModel(currentGameState, finishReason);
         for (GameEventListener l : eventListeners) {
             l.onGameStateEvent(kind, uiModel);
         }

@@ -17,6 +17,7 @@ public record GameUiModel(
         Boolean winnerKnewWord,
         controller.events.FinishStateView playerOneFinishState,
         controller.events.FinishStateView playerTwoFinishState,
+        controller.events.FinishReasonView finishReason,
         String playerOne,
         String playerTwo,
         int timerDurationSeconds,
