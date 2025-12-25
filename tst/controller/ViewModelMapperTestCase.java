@@ -15,9 +15,9 @@ import model.enums.WordLength;
 import model.enums.WordSource;
 import org.junit.jupiter.api.Test;
 
-class ViewToModelMapperTestCase {
+class ViewModelMapperTestCase {
 
-    private final ViewToModelMapper mapper = new ViewToModelMapper();
+    private final ViewModelMapper mapper = new ViewModelMapper();
 
     @Test
     void mapsWordChoice() {

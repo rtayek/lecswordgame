@@ -21,7 +21,7 @@ public class AppController {
     private final WordSelectionFlow wordSelectionFlow = new WordSelectionFlow();
     private final ProfileService profileService;
     private final NavigationCoordinator navigationCoordinator = new NavigationCoordinator();
-    private final ViewToModelMapper mapper = new ViewToModelMapper();
+    private final ViewModelMapper mapper = new ViewModelMapper();
 
     public AppController(PersistenceService persistenceService, GameController gameController, TurnTimer turnTimer) {
         this.gameSessionService = new GameSessionService(gameController, turnTimer);

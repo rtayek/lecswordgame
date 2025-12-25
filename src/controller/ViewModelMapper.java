@@ -16,7 +16,7 @@ import model.enums.WordSource;
 /**
  * Centralized conversion from view DTOs to domain/model types.
  */
-class ViewToModelMapper {
+class ViewModelMapper {
 
     WordChoice toModel(WordChoiceView view) {
         if (view == null) return null;

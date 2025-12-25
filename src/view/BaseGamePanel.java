@@ -58,8 +58,8 @@ abstract class BaseGamePanel extends JPanel implements GameEventListener {
     }
 
     protected void handleBackspace() {
-        var text = guessField.getText();
         if (!guessField.isEnabled()) return;
+        var text = guessField.getText();
         if (text != null && !text.isEmpty()) {
             guessField.setText(text.substring(0, text.length() - 1));
         }
