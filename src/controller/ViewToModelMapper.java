@@ -38,6 +38,15 @@ class ViewToModelMapper {
         return toModel(view);
     }
 
+    controller.events.DifficultyView toView(Difficulty value) {
+        if (value == null) return null;
+        return switch (value) {
+            case normal -> controller.events.DifficultyView.normal;
+            case hard -> controller.events.DifficultyView.hard;
+            case expert -> controller.events.DifficultyView.expert;
+        };
+    }
+
     WordLength toModel(WordLengthView view) {
         if (view == null) return WordLength.five;
         return switch (view) {
@@ -62,13 +71,7 @@ class ViewToModelMapper {
     GameLogEntry toModel(GameLogEntryView view) {
         if (view == null) return null;
         Difficulty difficulty = toModelNullable(view.difficulty());
-        WordLength length = null;
-        for (WordLength wl : WordLength.values()) {
-            if (wl.length() == view.wordLength()) {
-                length = wl;
-                break;
-            }
-        }
+        WordLength length = fromLength(view.wordLength());
         return new GameLogEntry(
                 null,
                 view.playerOneName(),
@@ -76,5 +79,14 @@ class ViewToModelMapper {
                 difficulty,
                 length,
                 view.resultSummary());
+    }
+
+    private WordLength fromLength(int length) {
+        for (WordLength wl : WordLength.values()) {
+            if (wl.length() == length) {
+                return wl;
+            }
+        }
+        return null;
     }
 }

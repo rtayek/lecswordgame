@@ -1,100 +1,85 @@
-I unpacked the **current tar** and checked what changed at the architectural level. Here’s what he actually did (with a quick quality assessment).
+I unpacked the current tar and looked specifically for the architectural refactorings we discussed. Here’s what he actually did (with a quick assessment).
 
-## What he did (confirmed)
+## What he changed
 
-### 1) Removed the last “easy model leak” from the controller surface
+### 1) Added a centralized view→model mapper
 
-`AppController.addGameLogEntry(...)` is now DTO-facing:
+New file:
+
+* `src/controller/ViewToModelMapper.java` (package-private)
+
+It centralizes conversions from DTOs to domain types:
+
+* `WordChoiceView -> model.WordChoice` (including `WordSourceView -> WordSource`)
+* `DifficultyView -> model.enums.Difficulty` (plus a nullable variant)
+* `WordLengthView -> model.enums.WordLength`
+* `TimerDurationView -> model.enums.TimerDuration`
+* `GameLogEntryView -> model.GameLogEntry` (maps `wordLength` int back to `WordLength`)
+
+This directly implements the “move mapping out of AppController” recommendation.
+
+**Verdict:** Good change. It shrinks the surface area of “random conversion logic” and makes it easier to unit test and audit.
+
+---
+
+### 2) Made `AppController.addGameLogEntry` DTO-only
+
+`AppController` now exposes:
 
 ```java
 public void addGameLogEntry(GameLogEntryView entry)
 ```
 
-and it delegates via a mapper:
+and delegates to:
 
 ```java
 profileService.addGameLogEntry(mapper.toModel(entry));
 ```
 
-That addresses the “public API trap door” I called out. Good change.
+So the last obvious public “model leak” is gone.
+
+**Verdict:** Good change. This aligns with your “DTO boundary” story and prevents accidental view/model coupling later.
 
 ---
 
-### 2) Introduced a centralized `ViewToModelMapper`
+### 3) Updated start/selection flows to use the mapper consistently
 
-There is now:
+In `AppController`:
 
-* `src/controller/ViewToModelMapper.java` (package-private)
+* `playerOneWordSelected` / `playerTwoWordSelected` now call `mapper.toModel(wordChoice)`
+* `pickWord(length)` and `isValidWord(word, length)` now use `mapper.toModel(length)`
+* `startSoloGame` / `startMultiplayerGame` use `mapper.toModel(difficulty/wordLength/timer)`
 
-It contains conversions for:
+So conversions are no longer duplicated across the controller.
 
-* `WordChoiceView -> model.WordChoice`
-* `DifficultyView -> model.enums.Difficulty`
-* `WordLengthView -> model.enums.WordLength`
-* `TimerDurationView -> model.enums.TimerDuration`
-* `GameLogEntryView -> model.GameLogEntry`
-
-This removes the scattered `toModel(...)` mapping methods from `AppController` and makes the conversions testable and auditable. Good change.
+**Verdict:** Good. Consistency matters here.
 
 ---
 
-### 3) `AppController` now uses the mapper consistently
+## What I would still tweak (small, optional)
 
-Examples in `AppController`:
+### A) Move `mapDifficulty` into the mapper (consistency polish)
 
-* word selection flow uses `mapper.toModel(wordChoice)`
-* `pickWord`, `isValidWord` route through `mapper.toModel(length)`
-* start game configuration uses `mapper.toModel(difficulty/wordLength/timer)`
+`getGameLog()` still uses a private `mapDifficulty(model.enums.Difficulty)` in `AppController`. It’s fine, but slightly inconsistent now that you have a dedicated mapper.
 
-So the “conversion policy” is centralized.
+**Optional:** add `DifficultyView toView(Difficulty)` to a small “ModelToViewMapper” or extend the existing mapper (renaming it if you do both directions).
 
----
+### B) `ViewToModelMapper.toModel(GameLogEntryView)` could be simplified
 
-## What he did **not** do (also confirmed)
+It currently loops through `WordLength.values()` to find the matching length. That’s fine, but if you later add lengths, you’ll want a single utility like:
 
-* He did **not** split `AppController` into separate facades (Game/Profile/Navigation). You still have one controller façade, but it’s cleaner now.
-* He did **not** touch the event contract, threading policy, or DTO-only rendering rules. (Good—no churn.)
-* CLI is still present (`src/cli/CommandLineGame.java`)—unchanged noise, not a correctness issue.
+* `WordLength.fromLength(int)` (domain-side) or
+* a tiny private helper in the mapper
 
-## My recommendations on *his* changes
-
-### Keep: DTO `addGameLogEntry` + centralized mapper
-
-These are the two highest-ROI “last architecture” improvements. I would keep them.
-
-### One improvement I’d make to `ViewToModelMapper.toModel(GameLogEntryView)`
-
-Right now it parses difficulty from a **string**:
-
-```java
-difficulty = Difficulty.valueOf(view.difficulty());
-```
-
-That works, but it’s fragile and it bypasses your typed view enums.
-
-**Better option (when convenient):**
-
-* Make `GameLogEntryView` carry a `DifficultyView` instead of `String difficulty`.
-* Then map it directly like the other fields.
-
-This is optional; it’s not breaking anything.
-
-### Minor: default word length in log mapping
-
-If `view.wordLength()` doesn’t match any enum length, it defaults to `five`. That’s fine, but you might prefer:
-
-* `null` (if you want “unknown”)
-* or explicitly documented fallback
-
-Again: optional.
+Not urgent.
 
 ---
 
 ## Bottom line
 
-He implemented the two “top-level” refactorings I recommended:
+He implemented the two “last mile” architectural improvements we identified:
 
-1. **DTO-only controller surface for logs**
-2. **centralized view→model mapping**
+1. **Centralize DTO→model mapping**
+2. **Remove the remaining DTO boundary leak (`addGameLogEntry`)**
 
-Both reduce future regression risk without changing architecture. This is exactly the kind of “final cleanup” that doesn’t restart the loop.
+These are the right kind of changes: small, clarifying, low-risk, and they do not re-open the architecture loop.
