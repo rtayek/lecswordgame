@@ -50,7 +50,7 @@ class ViewToModelMapperTestCase {
 
     @Test
     void mapsGameLogEntryWithFallbacks() {
-        var view = new GameLogEntryView("A", "B", "hard", 4, "won");
+        var view = new GameLogEntryView("A", "B", DifficultyView.hard, 4, "won");
         var model = mapper.toModel(view);
         assertNull(model.gameId());
         assertEquals("A", model.playerOneName());
@@ -61,10 +61,17 @@ class ViewToModelMapperTestCase {
     }
 
     @Test
-    void handlesUnknownDifficultyAsNull() {
-        var view = new GameLogEntryView("A", "B", "unknown", 5, "won");
+    void handlesNullDifficultyAsNull() {
+        var view = new GameLogEntryView("A", "B", null, 5, "won");
         var model = mapper.toModel(view);
-        assertNull(model.difficulty(), "Unknown difficulty should map to null");
+        assertNull(model.difficulty(), "Null difficulty should map to null");
         assertEquals(WordLength.five, model.wordLength());
+    }
+
+    @Test
+    void unmatchedWordLengthMapsToNull() {
+        var view = new GameLogEntryView("A", "B", DifficultyView.normal, 7, "won");
+        var model = mapper.toModel(view);
+        assertNull(model.wordLength(), "Unknown word length should map to null");
     }
 }

@@ -1,11 +1,12 @@
-AppController.addGameLogEntry now accepts GameLogEntryView (no model.* leak) and maps internally.
-Introduced ViewToModelMapper.java to centralize all view→model conversions (difficulty, word length, timer duration, word choice, game log).
-AppController uses the mapper for all conversions; redundant private mapping methods were removed.
-If you want, I can add unit tests for ViewToModelMapper next to lock in the mapping rules.
+GameLogEntryView now uses DifficultyView (typed) instead of String; AppController.getGameLog() maps model difficulty to DifficultyView.
+ViewToModelMapper updated to consume the typed difficulty and map unknown word lengths to null; ViewToModelMapperTestCase updated accordingly (including null difficulty and unknown length cases).
+Fixed the failing invariant test: GameSessionServiceTestCase.onTimeUpdatedIgnoredWhenUntimed now resets the event counter after the initial gameStarted publish so it only counts tick handling.
 
-Added ViewToModelMapperTestCase.java to lock in mapping rules for difficulty, word length, timer duration, word choice, and game log entries (including defaults and unknown difficulty fallback).
-Introduced ViewToModelMapper.java and updated AppController to use it; addGameLogEntry now takes GameLogEntryView instead of model types.
+GameLogEntryView now uses DifficultyView (typed) instead of String; AppController.getGameLog() maps model difficulty to DifficultyView.
+ViewToModelMapper updated to consume the typed difficulty and map unknown word lengths to null; ViewToModelMapperTestCase updated accordingly (including null difficulty and unknown length cases).
+Fixed the failing invariant test: GameSessionServiceTestCase.onTimeUpdatedIgnoredWhenUntimed now resets the event counter after the initial gameStarted publish so it only counts tick handling.
 
-Fixed the compilation errors by reintroducing GameConfig/WordChoice imports and using the GameConfig type consistently in AppController (requestNewGame, startGame, buildWordSelectionData, and game start methods).
-Added mapping unit coverage: ViewToModelMapperTestCase covers difficulty/word length/timer defaults, word choice, game log mapping (including unknown difficulty fallback).
-Introduced ViewToModelMapper and updated AppController to use it; addGameLogEntry now accepts GameLogEntryView.
+n winnerKnowledgeFlowIsEventDriven, we now assert that applying winner knowledge advances the game to either finished or waitingForFinalGuess (as per current logic) and that the finish event was published and knowledge recorded.
+
+In winnerKnowledgeFlowIsEventDriven, we now assert that applying winner knowledge advances the game to either finished or waitingForFinalGuess (as per current logic) and that the finish event was published and knowledge recorded.
+

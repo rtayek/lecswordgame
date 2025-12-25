@@ -1,75 +1,100 @@
-I took one last pass over the **current tar** with the mindset: “Is there anything *architectural* left that will create churn later?” You are in good shape. There are only a few **high-level refactorings** I would still consider, and all of them are optional and low risk.
+I unpacked the **current tar** and checked what changed at the architectural level. Here’s what he actually did (with a quick quality assessment).
 
-## 1) Tighten the public controller API surface (small, worthwhile)
+## What he did (confirmed)
 
-Right now `AppController` is clean for gameplay intent, but it still has one “domain leak” on the public surface:
+### 1) Removed the last “easy model leak” from the controller surface
 
-* `public void addGameLogEntry(model.GameLogEntry entry)`
+`AppController.addGameLogEntry(...)` is now DTO-facing:
 
-Even though the **view does not call it today**, it’s a trap door.
+```java
+public void addGameLogEntry(GameLogEntryView entry)
+```
 
-**Recommendation**
-Change it to DTO-only:
+and it delegates via a mapper:
 
-* `addGameLogEntry(GameLogEntryView entry)` (or hide it entirely and let the controller write logs internally on `gameFinished`)
+```java
+profileService.addGameLogEntry(mapper.toModel(entry));
+```
 
-This is the last easy way for `model.*` to leak outward.
-
-## 2) Move the view→model enum mapping out of `AppController` (clarity + testability)
-
-`AppController` contains mapping methods `toModel(DifficultyView/WordLengthView/TimerDurationView/WordChoiceView)`.
-
-**Recommendation**
-Create a single mapper class in controller, e.g. `ViewToModelMapper`, and inject/use it. This:
-
-* shrinks `AppController`
-* centralizes conversion rules
-* makes it easy to unit test mapping once
-
-No behavior change; purely readability and maintainability.
-
-## 3) Split `AppController` into three focused facades (only if it keeps growing)
-
-`AppController` is already the largest class. It currently mixes:
-
-* navigation orchestration (`NavigationCoordinator`, flow)
-* gameplay (`GameSessionService`)
-* profile/persistence (`ProfileService`)
-
-**Recommendation (optional)**
-If you add friends/logging/hardest-words features soon, consider splitting into:
-
-* `GameFacade` (start game, submit guess, report knowledge, listeners)
-* `ProfileFacade` (current profile, logs, hardest words)
-* `NavigationFacade` (set navigation, word selection flow)
-
-Then `AppController` becomes a thin façade that wires these together. This avoids “god object” drift.
-
-If you’re not adding those features soon, skip this.
-
-## 4) Decide what to do with `src/cli/CommandLineGame.java`
-
-You said CLI is low priority. Leaving it around is fine, but it increases cognitive load and can rot.
-
-**Recommendation**
-Either:
-
-* move CLI into `src/experimental/` (or similar), or
-* delete it until you actually prioritize CLI again
-
-This is about project hygiene, not architecture correctness.
-
-## 5) Timer tests: keep them deterministic (only if flakes appear)
-
-Your architecture is good; the only place that tends to get flaky over time is timer-related tests.
-
-**Recommendation**
-If you see intermittent reds, make `TimerController` accept a scheduler/clock abstraction so tests can advance time deterministically. If tests are stable today, do nothing.
+That addresses the “public API trap door” I called out. Good change.
 
 ---
 
-# Bottom line
+### 2) Introduced a centralized `ViewToModelMapper`
 
-No major architectural work is warranted now. If you do *anything*, do **(1)** and **(2)**: they are small, reduce future regressions, and keep the “DTO boundary” story consistent.
+There is now:
 
-Everything else is “only if the next feature wave makes it necessary.”
+* `src/controller/ViewToModelMapper.java` (package-private)
+
+It contains conversions for:
+
+* `WordChoiceView -> model.WordChoice`
+* `DifficultyView -> model.enums.Difficulty`
+* `WordLengthView -> model.enums.WordLength`
+* `TimerDurationView -> model.enums.TimerDuration`
+* `GameLogEntryView -> model.GameLogEntry`
+
+This removes the scattered `toModel(...)` mapping methods from `AppController` and makes the conversions testable and auditable. Good change.
+
+---
+
+### 3) `AppController` now uses the mapper consistently
+
+Examples in `AppController`:
+
+* word selection flow uses `mapper.toModel(wordChoice)`
+* `pickWord`, `isValidWord` route through `mapper.toModel(length)`
+* start game configuration uses `mapper.toModel(difficulty/wordLength/timer)`
+
+So the “conversion policy” is centralized.
+
+---
+
+## What he did **not** do (also confirmed)
+
+* He did **not** split `AppController` into separate facades (Game/Profile/Navigation). You still have one controller façade, but it’s cleaner now.
+* He did **not** touch the event contract, threading policy, or DTO-only rendering rules. (Good—no churn.)
+* CLI is still present (`src/cli/CommandLineGame.java`)—unchanged noise, not a correctness issue.
+
+## My recommendations on *his* changes
+
+### Keep: DTO `addGameLogEntry` + centralized mapper
+
+These are the two highest-ROI “last architecture” improvements. I would keep them.
+
+### One improvement I’d make to `ViewToModelMapper.toModel(GameLogEntryView)`
+
+Right now it parses difficulty from a **string**:
+
+```java
+difficulty = Difficulty.valueOf(view.difficulty());
+```
+
+That works, but it’s fragile and it bypasses your typed view enums.
+
+**Better option (when convenient):**
+
+* Make `GameLogEntryView` carry a `DifficultyView` instead of `String difficulty`.
+* Then map it directly like the other fields.
+
+This is optional; it’s not breaking anything.
+
+### Minor: default word length in log mapping
+
+If `view.wordLength()` doesn’t match any enum length, it defaults to `five`. That’s fine, but you might prefer:
+
+* `null` (if you want “unknown”)
+* or explicitly documented fallback
+
+Again: optional.
+
+---
+
+## Bottom line
+
+He implemented the two “top-level” refactorings I recommended:
+
+1. **DTO-only controller surface for logs**
+2. **centralized view→model mapping**
+
+Both reduce future regression risk without changing architecture. This is exactly the kind of “final cleanup” that doesn’t restart the loop.

@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 import util.PersistenceService;
 import model.GameState.GameConfig;
 import model.WordChoice;
+import model.enums.Difficulty;
 
 public class AppController {
 
@@ -91,7 +92,7 @@ public class AppController {
                 .map(e -> new GameLogEntryView(
                         e.playerOneName(),
                         e.playerTwoName(),
-                        e.difficulty() == null ? "" : e.difficulty().name(),
+                        mapDifficulty(e.difficulty()),
                         e.wordLength() == null ? 0 : e.wordLength().length(),
                         e.resultSummary()))
                 .collect(Collectors.toList());
@@ -142,6 +143,15 @@ public class AppController {
         var cpu = new model.GamePlayer(new model.PlayerProfile("Computer", ""), false);
         var config = new GameConfig(model.enums.GameMode.solo, mapper.toModel(difficulty), mapper.toModel(wordLength), mapper.toModel(timer), human, cpu);
         requestNewGame(config);
+    }
+
+    private DifficultyView mapDifficulty(Difficulty value) {
+        if (value == null) return null;
+        return switch (value) {
+            case normal -> DifficultyView.normal;
+            case hard -> DifficultyView.hard;
+            case expert -> DifficultyView.expert;
+        };
     }
 
     public static AppController create() {

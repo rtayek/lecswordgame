@@ -33,6 +33,11 @@ class ViewToModelMapper {
         };
     }
 
+    Difficulty toModelNullable(DifficultyView view) {
+        if (view == null) return null;
+        return toModel(view);
+    }
+
     WordLength toModel(WordLengthView view) {
         if (view == null) return WordLength.five;
         return switch (view) {
@@ -56,15 +61,8 @@ class ViewToModelMapper {
 
     GameLogEntry toModel(GameLogEntryView view) {
         if (view == null) return null;
-        Difficulty difficulty = null;
-        if (view.difficulty() != null && !view.difficulty().isBlank()) {
-            try {
-                difficulty = Difficulty.valueOf(view.difficulty());
-            } catch (IllegalArgumentException ex) {
-                difficulty = null;
-            }
-        }
-        WordLength length = WordLength.five;
+        Difficulty difficulty = toModelNullable(view.difficulty());
+        WordLength length = null;
         for (WordLength wl : WordLength.values()) {
             if (wl.length() == view.wordLength()) {
                 length = wl;
